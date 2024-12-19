@@ -4,7 +4,7 @@ info:
   description: |
     # Submit Payment API.
 
-    This API is used to initiate, submit and get summary of single payment.
+    This API is used to initiate, submit and get status of single payment.
     Payment products allowed in this api:
     * Domestic credit transfer
 
