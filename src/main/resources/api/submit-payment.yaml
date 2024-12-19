@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: submit-payment
   description: |
-    # Submit Payment API
+    # Submit Payment API.
 
     This API is used to initiate, submit and get summary of single payment.
     Payment products allowed in this api:
