@@ -1,0 +1,1286 @@
+openapi: 3.0.1
+info:
+  title: submit-payment
+  description: |
+    # Submit Payment API
+
+    This API is used to initiate, submit and get summary of single payment.
+    Payment products allowed in this api:
+    * Domestic credit transfer
+
+    out of scope in this version
+    ====
+    - target error responses
+    - redirection for Cancel calls (SCA) workflow
+  version: 1.0.0
+servers:
+- url: https://virtserver.swaggerhub.com/LIAMFORDAU/submit-payent/1.0.0
+  description: SwaggerHub API Auto Mocking
+tags:
+- name: Submit Payment
+  description: Submit Payment API for single payment orders.
+paths:
+  /api/payments/v1/submit-payment:
+    post:
+      tags:
+      - Single Payment Orders
+      description: |
+        The method to initiate a single credit transfer. In order to initiate specific payment (domestic, sepa or foreign)
+        paymentType must be selected and set of payment type specific attributes filled.
+      operationId: initiateSinglePaymentDomestic
+      parameters:
+      - name: X-Request-ID
+        in: header
+        description: "ID of the request, unique to the call, as determined by the\
+          \ initiating party."
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+        example: 99391c7e-ad88-49ec-a2ad-99ddcb1f7721
+      - name: X-Correlation-ID
+        in: header
+        description: "X-Correlation-ID will be used to track requests through all\
+          \ involved services to be able to graph request flows, map how services\
+          \ contribute to response times, identify bottle necks, etc. The X-Correlation-ID\
+          \ must be propagated unchanged in any and all downstream service calls to\
+          \ other Newton Microservices as well as NWU services. Multiple calls from\
+          \ Newton services to NWU services will potentially have equal X-Correlation-ID\
+          \ values."
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+        example: 99391c7e-ad88-49ec-a2ad-99ddcb1f7721
+      - name: X-Idempotency-Key
+        in: header
+        description: Unique request identifier to support idempotency.
+        required: false
+        style: simple
+        explode: false
+        schema:
+          maxLength: 40
+          type: string
+        example: e457b5a2e4d86bd1198ee56343ba864fe8b2
+      requestBody:
+        $ref: '#/components/requestBodies/PostSingleCreditTransferRequest'
+      responses:
+        "201":
+          description: Response body with created credit transfer details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostSingleCreditTransferResponse'
+        default:
+          description: Unexpected Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - openId:
+        - customer
+        - employee
+        - third-party-customer
+        - m2m
+components:
+  schemas:
+    DomesticCreditTransferInitiation:
+      allOf:
+      - $ref: '#/components/schemas/CreditTransferCommon'
+      - type: object
+        properties:
+          serviceLevel:
+            $ref: '#/components/schemas/DomesticServiceLevel'
+        description: Domestic credit transfers initiation attributes.
+    DomesticSingleCreditTransferInitiation:
+      allOf:
+      - required:
+        - paymentType
+        type: object
+        properties:
+          paymentType:
+            type: string
+            description: Indicates domestic transfer type.
+            example: DOMESTIC
+            enum:
+            - DOMESTIC
+      - $ref: '#/components/schemas/DomesticCreditTransferInitiation'
+      - $ref: '#/components/schemas/SinglePaymentOrderCommon'
+    SinglePaymentOrderCommon:
+      required:
+      - requestedExecutionDate
+      type: object
+      properties:
+        requestedExecutionDate:
+          $ref: '#/components/schemas/RequestedExecutionDate'
+      description: Generic attributes of every single order.
+    DomesticServiceLevel:
+      type: string
+      description: Service level for domestic payment according to ISO 20022.
+      example: SDVA
+      enum:
+      - SDVA
+    Amount:
+      discriminator:
+        propertyName: type
+        mapping:
+          INSTRUCTED: '#/components/schemas/InstructedAmount'
+          EQUIVALENT: '#/components/schemas/EquivalentAmount'
+      oneOf:
+      - $ref: '#/components/schemas/InstructedAmount'
+      - $ref: '#/components/schemas/EquivalentAmount'
+    InstructedAmount:
+      required:
+      - amount
+      - currency
+      - type
+      type: object
+      properties:
+        type:
+          type: string
+          description: Discriminator value. Must be equal to 'INSTRUCTED'.
+          example: INSTRUCTED
+          enum:
+          - INSTRUCTED
+        amount:
+          type: number
+          description: The amount given with fractional digits.
+          example: 123.45
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+      description: |
+        Amount of money to be moved between the debtor and creditor, before deduction of
+        charges, expressed in the currency as ordered by the initiating party.
+    EquivalentAmount:
+      required:
+      - amount
+      - currencyOfTransfer
+      - type
+      type: object
+      properties:
+        type:
+          type: string
+          description: Discriminator value. Must be equal to 'EQUIVALENT'.
+          example: EQUIVALENT
+          enum:
+          - EQUIVALENT
+        currencyOfTransfer:
+          $ref: '#/components/schemas/CurrencyCode'
+        amount:
+          type: number
+          description: The amount given with fractional digits.
+          example: 123.45
+      description: |
+        Amount of money to be moved between the debtor and creditor, expressed in the currency of
+        the debtor's account, and the currency in which the amount is to be moved.
+    DebtorAccount:
+      description: |
+        Identification of debtor account used for specific transfer. Multiple identification schemas are aplicable but not all must be supported by specific NWU.
+      discriminator:
+        propertyName: accountReferenceType
+        mapping:
+          IBAN: '#/components/schemas/AccountReferenceIban'
+          BBAN: '#/components/schemas/AccountReferenceBban'
+          PAN: '#/components/schemas/AccountReferencePan'
+      oneOf:
+      - $ref: '#/components/schemas/AccountReferenceIban'
+      - $ref: '#/components/schemas/AccountReferenceBban'
+      - $ref: '#/components/schemas/AccountReferencePan'
+    CreditorAccount:
+      description: |
+        Identification of creditor account used for specific transfer. Multiple identification schemas are aplicable but not all must be supported by specific NWU.
+      discriminator:
+        propertyName: accountReferenceType
+        mapping:
+          IBAN: '#/components/schemas/AccountReferenceIban'
+          BBAN: '#/components/schemas/AccountReferenceBban'
+          PAN: '#/components/schemas/AccountReferencePan'
+          MSISDN: '#/components/schemas/AccountReferenceMsisdn'
+          EMAIL: '#/components/schemas/AccountReferenceEmail'
+          TAX_IDENTIFICATION: '#/components/schemas/AccountReferenceTaxId'
+      oneOf:
+      - $ref: '#/components/schemas/AccountReferenceIban'
+      - $ref: '#/components/schemas/AccountReferenceBban'
+      - $ref: '#/components/schemas/AccountReferencePan'
+      - $ref: '#/components/schemas/AccountReferenceMsisdn'
+      - $ref: '#/components/schemas/AccountReferenceEmail'
+      - $ref: '#/components/schemas/AccountReferenceTaxId'
+    UltimateDebtor:
+      type: object
+      properties:
+        name:
+          maxLength: 140
+          minLength: 1
+          type: string
+          description: Name of the ultimate debtor.
+        identification:
+          $ref: '#/components/schemas/PartyIdentification'
+        address:
+          $ref: '#/components/schemas/Address'
+        countryOfResidence:
+          $ref: '#/components/schemas/CountryCode'
+      description: "Ultimate party that owes an amount of money to the (ultimate)\
+        \ Creditor. The Ultimate Debtor is the party that owes the cash to the (Ultimate)\
+        \ Creditor, i.e. as a result of receipt of goods or services, gifts, charity\
+        \ payments and is the party which orders the payment. It may be equal to the\
+        \ account owner whose account will be debited by the Debtor Agent to make\
+        \ the payment (i.e. the Debtor), but it can also be different from the Debtor.\
+        \ This is usually the buyer. It should only be specified in case it is different\
+        \ from the Debtor."
+    UltimateCreditor:
+      type: object
+      properties:
+        name:
+          maxLength: 140
+          minLength: 1
+          type: string
+          description: Name of the ultimate creditor.
+        identification:
+          $ref: '#/components/schemas/PartyIdentification'
+        address:
+          $ref: '#/components/schemas/Address'
+        countryOfResidence:
+          $ref: '#/components/schemas/CountryCode'
+      description: Ultimate party to which an amount of money is due. Party that is
+        the ultimate beneficiary of the cash transfer. It may be equal to or different
+        from the Creditor. This is usually the seller.
+    AccountReferenceType:
+      required:
+      - accountReferenceType
+      type: object
+      properties:
+        accountReferenceType:
+          type: string
+          enum:
+          - IBAN
+          - BBAN
+          - PAN
+          - MSISDN
+          - EMAIL
+          - TAX_IDENTIFICATION
+    AccountReferenceIban:
+      example:
+        currency: EUR
+        iban: AT611904300234573201
+        accountReferenceType: IBAN
+      allOf:
+      - $ref: '#/components/schemas/AccountReferenceType'
+      - required:
+        - iban
+        type: object
+        properties:
+          iban:
+            $ref: '#/components/schemas/Iban'
+          currency:
+            $ref: '#/components/schemas/CurrencyCode'
+        description: This data elements is used for payment accounts which have IBAN.
+    AccountReferenceBban:
+      allOf:
+      - $ref: '#/components/schemas/AccountReferenceType'
+      - required:
+        - bban
+        type: object
+        properties:
+          bban:
+            $ref: '#/components/schemas/Bban'
+          currency:
+            $ref: '#/components/schemas/CurrencyCode'
+        description: This data elements is used for payment accounts which have no
+          IBAN.
+    AccountReferencePan:
+      allOf:
+      - $ref: '#/components/schemas/AccountReferenceType'
+      - required:
+        - pan
+        type: object
+        properties:
+          pan:
+            $ref: '#/components/schemas/Pan'
+          currency:
+            $ref: '#/components/schemas/CurrencyCode'
+        description: |
+          Reference to an account by the Primary Account Number (PAN) of a card,
+          can be tokenised by the ASPSP due to PCI DSS requirements.
+    AccountReferenceEmail:
+      allOf:
+      - $ref: '#/components/schemas/AccountReferenceType'
+      - required:
+        - email
+        type: object
+        properties:
+          email:
+            $ref: '#/components/schemas/Email'
+          currency:
+            $ref: '#/components/schemas/CurrencyCode'
+        description: Reference to an account by the customer email.
+    AccountReferenceTaxId:
+      allOf:
+      - $ref: '#/components/schemas/AccountReferenceType'
+      - required:
+        - taxId
+        type: object
+        properties:
+          taxId:
+            $ref: '#/components/schemas/TaxIdentification'
+          currency:
+            $ref: '#/components/schemas/CurrencyCode'
+        description: Reference to an account by the tax identification number.
+    AccountReferenceMsisdn:
+      allOf:
+      - $ref: '#/components/schemas/AccountReferenceType'
+      - required:
+        - msisdn
+        type: object
+        properties:
+          msisdn:
+            $ref: '#/components/schemas/Msisdn'
+          currency:
+            $ref: '#/components/schemas/CurrencyCode'
+        description: An alias to access a payment account via a registered mobile
+          phone number.
+    Creditor:
+      type: object
+      properties:
+        name:
+          maxLength: 140
+          minLength: 1
+          type: string
+        identification:
+          $ref: '#/components/schemas/PartyIdentification'
+        address:
+          $ref: '#/components/schemas/Address'
+        countryOfResidence:
+          $ref: '#/components/schemas/CountryCode'
+      description: Definition of creditor.
+    Debtor:
+      type: object
+      properties:
+        name:
+          maxLength: 140
+          minLength: 1
+          type: string
+        identification:
+          $ref: '#/components/schemas/PartyIdentification'
+        address:
+          $ref: '#/components/schemas/Address'
+        countryOfResidence:
+          $ref: '#/components/schemas/CountryCode'
+      description: Definition of creditor.
+    PartyIdentification:
+      description: Identification of the party.
+      discriminator:
+        propertyName: partyType
+        mapping:
+          PRIVATE: '#/components/schemas/PrivateIdentification'
+          ORGANISATION: '#/components/schemas/OrganisationIdentification'
+      oneOf:
+      - $ref: '#/components/schemas/PrivateIdentification'
+      - $ref: '#/components/schemas/OrganisationIdentification'
+    PrivateIdentification:
+      required:
+      - partyType
+      type: object
+      properties:
+        partyType:
+          type: string
+          enum:
+          - PRIVATE
+        birthDate:
+          type: string
+          format: date
+          example: 2019-09-21
+        provinceOfBirth:
+          maxLength: 35
+          minLength: 1
+          type: string
+          example: Vienna
+        cityOfBirth:
+          maxLength: 35
+          minLength: 1
+          type: string
+          example: Vienna
+        countryOfBirth:
+          maxLength: 2
+          minLength: 1
+          type: string
+          example: AT
+        id:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: Identification assigned by an institution.
+        issuer:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: Entity that assigns the identification.
+        scheme:
+          $ref: '#/components/schemas/PrivateIdentificationScheme'
+    PrivateIdentificationScheme:
+      type: object
+      properties:
+        code:
+          maxLength: 4
+          minLength: 1
+          type: string
+          description: "Name of the identification scheme, in a coded form as published\
+            \ in an external list ExternalPersonIdentification1Code."
+          example: CCPT
+        proprietary:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: "Name of the identification scheme, in a free text form."
+    OrganisationIdentification:
+      required:
+      - id
+      - partyType
+      type: object
+      properties:
+        partyType:
+          type: string
+          enum:
+          - ORGANISATION
+        id:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: Identification assigned by an institution.
+          example: "47110815"
+        issuer:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: Entity that assigns the identification.
+        scheme:
+          $ref: '#/components/schemas/OrganisationIdentificationScheme'
+      description: Identification of an organisation.
+    OrganisationIdentificationScheme:
+      type: object
+      properties:
+        code:
+          maxLength: 4
+          minLength: 1
+          type: string
+          description: "Name of the identification scheme, in a coded form as published\
+            \ in an external list ExternalOrganisationIdentification1Code."
+          example: TXID
+        proprietary:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: "Name of the identification scheme, in a free text form."
+      description: Organisation identification scheme.
+    RequestedExecutionDate:
+      type: string
+      description: |
+        https://tools.ietf.org/html/rfc3339#section-5.6
+        date time for the expected execution time.
+      format: date
+      example: 2018-05-05
+    RemittanceInformationUnstructured:
+      maxLength: 140
+      type: string
+      description: Unstructured remittance information.
+      example: Ref Number Merchant
+    EndToEndIdentification:
+      maxLength: 35
+      type: string
+      description: |
+        Unique identification, as assigned by the initiating party, to unambiguously identify the transaction.
+        This identification is passed on, unchanged, throughout the entire end-to-end chain.
+      example: RI-123456789
+    UETR:
+      pattern: "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}"
+      type: string
+      description: |
+        Unique End-to-End Transaction Reference. Generated by the Payer and passed through, without modification,
+        the SWIFT network and any intermediary banks through to the Payee (beneficiary).
+      example: a067ed60-e5d6-420a-8cac-e319dad61d07
+    Address:
+      title: Address
+      required:
+      - addressLine1
+      - country
+      type: object
+      properties:
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        addressLine1:
+          maxLength: 70
+          minLength: 1
+          type: string
+          example: Rue blue 89
+        addressLine2:
+          maxLength: 70
+          minLength: 1
+          type: string
+          example: 75000 Paris
+      description: Definition of address in structured way.
+      example:
+        addressLine1: Rue blue 89
+        addressLine2: 75000 Paris
+        country: FR
+    PurposeCode:
+      maxLength: 4
+      minLength: 1
+      type: string
+      description: |
+        It is an optional field to describe the purpose of the payment transaction.
+        The list of possible values with description can be found in https://www.iso20022.org/catalogue-messages/additional-content-messages/external-code-sets ExternalPurpose1Code
+      example: BKDF
+    CategoryPurposeCode:
+      maxLength: 4
+      minLength: 1
+      type: string
+      description: |
+        Specifies the high level purpose of the instruction based on a set of pre-defined categories.
+        The list of possible values with description can be found in https://www.iso20022.org/catalogue-messages/additional-content-messages/external-code-sets ExternalCategoryPurpose1Code
+      example: LOAN
+    RemittanceInformationStructured:
+      type: array
+      description: Structured remittance information.
+      items:
+        $ref: '#/components/schemas/RemittanceInformationStructuredItem'
+    RemittanceInformationStructuredItem:
+      description: |
+        Identification of debtor account used for specific transfer. Multiple identification schemas are aplicable but not all must be supported by specific NWU.
+      discriminator:
+        propertyName: structureType
+        mapping:
+          CREDITOR_REFERENCE: '#/components/schemas/CreditorReferenceInformation'
+          REFERRED_DOCUMENT: '#/components/schemas/ReferredDocumentInformation'
+          BG_BUDGETARY_PAYMENT: '#/components/schemas/BGBudgetaryPaymentInformation'
+          BG_BUDGETARY_MULTILINE_PAYMENT: '#/components/schemas/BGMultiLineBudgetaryPaymentInformation'
+          BG_SEBRA_PAYMENT: '#/components/schemas/BGSebraPaymentInformation'
+      oneOf:
+      - $ref: '#/components/schemas/CreditorReferenceInformation'
+      - $ref: '#/components/schemas/ReferredDocumentInformation'
+      - $ref: '#/components/schemas/BGBudgetaryPaymentInformation'
+      - $ref: '#/components/schemas/BGMultiLineBudgetaryPaymentInformation'
+      - $ref: '#/components/schemas/BGSebraPaymentInformation'
+    CreditorReferenceInformation:
+      required:
+      - reference
+      - structureType
+      type: object
+      properties:
+        structureType:
+          type: string
+          description: Structure type for creditor reference information.
+          enum:
+          - CREDITOR_REFERENCE
+        reference:
+          maxLength: 35
+          type: string
+        referenceType:
+          maxLength: 35
+          type: string
+        referenceIssuer:
+          maxLength: 35
+          type: string
+      description: Structured remittance information.
+    ReferredDocumentInformation:
+      required:
+      - structureType
+      type: object
+      properties:
+        structureType:
+          type: string
+          description: Structure type for creditor reference information.
+          enum:
+          - REFERRED_DOCUMENT
+        code:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: Special Code
+          example: MSIN or CNFA etc
+        proprietary:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: Proprietary
+          example: Proprietary
+        issuer:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: referenceIssuer
+          example: referenceIssuer
+        number:
+          maxLength: 35
+          minLength: 1
+          type: string
+          description: Loan Number
+          example: LON124546
+        relatedDate:
+          type: string
+          format: date
+          example: 2019-09-21
+    BGBudgetaryPaymentInformation:
+      required:
+      - structureType
+      - taxPayerId
+      - taxPayerName
+      - taxPayerType
+      type: object
+      properties:
+        structureType:
+          type: string
+          description: Structure type for creditor reference information.
+          enum:
+          - BG_BUDGETARY_PAYMENT
+        regulatoryReportType:
+          $ref: '#/components/schemas/BGRegulatoryReportType'
+        documentNumber:
+          $ref: '#/components/schemas/BGBudgetDocumentNumber'
+        documentDate:
+          type: string
+          description: Document Date issued by Government authority.
+          format: date
+        taxPayerId:
+          $ref: '#/components/schemas/BGTaxPayerId'
+        taxPayerType:
+          $ref: '#/components/schemas/BGTaxPayerType'
+        taxPayerName:
+          $ref: '#/components/schemas/BGTaxPayerName'
+        paymentCategory:
+          $ref: '#/components/schemas/BGPaymentCategory'
+        debtorPaymentCategory:
+          $ref: '#/components/schemas/BGPaymentCategory'
+        fromDate:
+          type: string
+          description: From Date - start of period date.
+          format: date
+        endDate:
+          type: string
+          description: End Date - end of period date.
+          format: date
+      description: BGN budget transfers remittance information.
+    BGMultiLineBudgetaryPaymentInformation:
+      required:
+      - multiLineBudgetDetails
+      - structureType
+      - taxPayerId
+      - taxPayerName
+      - taxPayerType
+      type: object
+      properties:
+        structureType:
+          type: string
+          description: Structure type for creditor reference information.
+          enum:
+          - BG_BUDGETARY_MULTILINE_PAYMENT
+        taxPayerId:
+          $ref: '#/components/schemas/BGTaxPayerId'
+        taxPayerType:
+          $ref: '#/components/schemas/BGTaxPayerType'
+        taxPayerName:
+          $ref: '#/components/schemas/BGTaxPayerName'
+        debtorPaymentCategory:
+          $ref: '#/components/schemas/BGPaymentCategory'
+        multiLineDetails:
+          maxItems: 4
+          minItems: 1
+          type: array
+          items:
+            $ref: '#/components/schemas/BGBudgetaryPaymentDetailsItem'
+      description: BGN multi-line budget transfers remittance information.
+    BGBudgetaryPaymentDetailsItem:
+      required:
+      - instructedInformation
+      - itemAmount
+      - paymentCategory
+      type: object
+      properties:
+        paymentCategory:
+          $ref: '#/components/schemas/BGPaymentCategory'
+        itemAmount:
+          $ref: '#/components/schemas/InstructedAmount'
+        regulatoryReportType:
+          $ref: '#/components/schemas/BGRegulatoryReportType'
+        documentNumber:
+          $ref: '#/components/schemas/BGBudgetDocumentNumber'
+        documentDate:
+          type: string
+          description: Document Date issued by Government authority.
+          format: date
+        fromDate:
+          type: string
+          description: From Date - start of period date.
+          format: date
+        endDate:
+          type: string
+          description: End Date - end of period date.
+          format: date
+        instructedInformation:
+          maxLength: 70
+          type: string
+          description: Additional instructed information unstructured.
+      description: Details item for budget payments.
+    BGSebraPaymentInformation:
+      required:
+      - paymentCategory
+      - structureType
+      type: object
+      properties:
+        structureType:
+          type: string
+          description: Structure type for creditor reference information.
+          enum:
+          - BG_SEBRA_PAYMENT
+        paymentCategory:
+          $ref: '#/components/schemas/BGPaymentCategory'
+        debtorPaymentCategory:
+          $ref: '#/components/schemas/BGPaymentCategory'
+        regulatoryReportType:
+          $ref: '#/components/schemas/BGRegulatoryReportType'
+        documentNumber:
+          $ref: '#/components/schemas/BGBudgetDocumentNumber'
+        documentDate:
+          type: string
+          description: Document Date issued by Government authority.
+          format: date
+        fromDate:
+          type: string
+          description: From Date - start of period date.
+          format: date
+        endDate:
+          type: string
+          description: End Date - end of period date.
+          format: date
+        activityCode:
+          maxLength: 4
+          minLength: 1
+          type: string
+          description: The code of activity of the payer's payment reason.
+      description: BGN SEBRA transfers remittance information.
+    BGPaymentCategory:
+      pattern: "^\\d{6}$|^\\d{2}$"
+      type: string
+      description: Budget payment type - according BNB nomenclature.
+    BGBudgetDocumentNumber:
+      pattern: "^.{0,17}$"
+      type: string
+      description: The number of the document.
+    BGRegulatoryReportType:
+      pattern: "^[1-69]$"
+      type: string
+      description: The type of the document.
+    BGTaxPayerId:
+      maxLength: 13
+      minLength: 9
+      type: string
+      description: Bulstat/EGN/ENC(LNC) of the obliged party.
+    BGTaxPayerName:
+      maxLength: 35
+      minLength: 1
+      type: string
+      description: The name of the obliged party.
+    BGTaxPayerType:
+      type: string
+      description: The tax type code of the obliged party.
+      example: EGN
+      enum:
+      - EGN
+      - EIK
+      - PNF
+    InstructionPriority:
+      type: string
+      description: Serves the closer specification of the transfer priority.
+      example: NORMAL
+      enum:
+      - HIGH
+      - NORMAL
+    CreditorAgentName:
+      maxLength: 140
+      type: string
+      description: Name of creditor financial agent.
+      example: Merchant123
+    ChargeBearer:
+      type: string
+      description: |
+        Specifies which party/parties will bear the charges associated with the processing of the payment transaction.
+      example: CRED
+      enum:
+      - CRED
+      - DEBT
+      - SHAR
+      - SLEV
+      x-enum-elements:
+      - name: CRED
+        description: CREDITOR
+      - name: DEBT
+        description: DEBTOR
+      - name: SHAR
+        description: SHARED
+      - name: SLEV
+        description: SLEV
+    Error:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique UUID for audit purposes.
+        code:
+          type: string
+          description: Optional error code for reporting purposes.
+        description:
+          type: string
+          description: The description of the error.
+    CreditTransferCommon:
+      required:
+      - amount
+      - creditorAccount
+      - debtorAccount
+      - externalPaymentId
+      type: object
+      properties:
+        externalPaymentId:
+          $ref: '#/components/schemas/ExternalPaymentId'
+        endToEndId:
+          $ref: '#/components/schemas/EndToEndIdentification'
+        uetr:
+          $ref: '#/components/schemas/UETR'
+        amount:
+          $ref: '#/components/schemas/Amount'
+        exchangeRateInformation:
+          $ref: '#/components/schemas/ExchangeRateInformation'
+        debtor:
+          $ref: '#/components/schemas/Debtor'
+        debtorAccount:
+          $ref: '#/components/schemas/DebtorAccount'
+        creditorAccount:
+          $ref: '#/components/schemas/CreditorAccount'
+        creditor:
+          $ref: '#/components/schemas/Creditor'
+        creditorAgent:
+          $ref: '#/components/schemas/Bicfi'
+        creditorAgentName:
+          $ref: '#/components/schemas/CreditorAgentName'
+        remittanceInformationStructured:
+          $ref: '#/components/schemas/RemittanceInformationStructured'
+        remittanceInformationUnstructured:
+          $ref: '#/components/schemas/RemittanceInformationUnstructured'
+        purposeCode:
+          $ref: '#/components/schemas/PurposeCode'
+        categoryPurpose:
+          $ref: '#/components/schemas/CategoryPurposeCode'
+        instructionPriority:
+          $ref: '#/components/schemas/InstructionPriority'
+        chargeBearer:
+          $ref: '#/components/schemas/ChargeBearer'
+        intermediary:
+          type: array
+          items:
+            $ref: '#/components/schemas/Intermediary'
+        ultimateDebtor:
+          $ref: '#/components/schemas/UltimateDebtor'
+        ultimateCreditor:
+          $ref: '#/components/schemas/UltimateCreditor'
+      description: Common attrubutes of a credit transfer initiation request and an
+        initiated credit transfer.
+    CreditTransfer:
+      description: Initiated credit transfer.
+      allOf:
+      - type: object
+        properties:
+          paymentId:
+            $ref: '#/components/schemas/PaymentId'
+          status:
+            $ref: '#/components/schemas/PaymentStatus'
+          statusDescription:
+            $ref: '#/components/schemas/StatusDescription'
+    DomesticSingleCreditTransfer:
+      allOf:
+      - required:
+        - paymentType
+        type: object
+        properties:
+          paymentType:
+            type: string
+            description: Indicates domestic transfer type.
+            example: DOMESTIC
+            enum:
+            - DOMESTIC
+          serviceLevel:
+            $ref: '#/components/schemas/DomesticServiceLevel'
+        description: This is additional for domestic payment initiation.
+      - $ref: '#/components/schemas/CreditTransfer'
+      - $ref: '#/components/schemas/SinglePaymentOrderCommon'
+    PaymentStatus:
+      title: transactionStatus
+      type: string
+      example: ACCP
+      enum:
+      - ACCC
+      - ACCP
+      - ACSC
+      - ACSP
+      - ACTC
+      - ACWC
+      - ACWP
+      - RCVD
+      - PDNG
+      - PATC
+      - RJCT
+      - CANC
+      x-enum-elements:
+      - name: ACCC
+        description: AcceptedSettlementCompleted - Money Credited
+      - name: ACCP
+        description: AcceptedCustomerProfile
+      - name: ACSC
+        description: AcceptedSettlementCompleted
+      - name: ACSP
+        description: AcceptedSettlementInProgress
+      - name: ACTC
+        description: AcceptedTechnicalValidation
+      - name: ACWC
+        description: AcceptedWithChange
+      - name: ACWP
+        description: AcceptedWithoutPosting
+      - name: RCVD
+        description: Received
+      - name: PDNG
+        description: Pending
+      - name: PATC
+        description: PartiallyAcceptedTechnical
+      - name: RJCT
+        description: Rejected
+      - name: CANC
+        description: Cancelled
+    CurrencyCode:
+      maxLength: 3
+      pattern: "[A-Z]{3}"
+      type: string
+      description: ISO 4217 Alpha 3 currency code.
+      example: EUR
+    CountryCode:
+      pattern: "[A-Z]{2}"
+      type: string
+      description: ISO 3166 ALPHA2 country code.
+      example: SE
+    Bban:
+      pattern: "[a-zA-Z0-9]{1,30}"
+      type: string
+      description: |
+        Basic Bank Account Number (BBAN) Identifier
+
+        This data element can be used in the body of the Consent Request
+          Message for retrieving Account access Consent from this Account. This
+          data elements is used for payment Accounts which have no IBAN.
+          ISO20022: Basic Bank Account Number (BBAN).
+
+          Identifier used nationally by financial institutions, i.e., in individual countries,
+          generally as part of a National Account Numbering Scheme(s),
+          which uniquely identifies the account of a customer.
+      example: BARC12345612345678
+    Bicfi:
+      pattern: "[A-Z]{6,6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3,3}){0,1}"
+      type: string
+      description: BICFI ISO 9362.
+      example: AAAADEBBXXX
+    Iban:
+      pattern: "[A-Z]{2,2}[0-9]{2,2}[a-zA-Z0-9]{1,30}"
+      type: string
+      description: IBAN of an account.
+      example: FR7612345987650123456789014
+    Msisdn:
+      maxLength: 35
+      type: string
+      description: Mobile phone number.
+      example: "+491701234567"
+    Email:
+      maxLength: 140
+      type: string
+      description: Mobile phone number.
+      example: hans.meier@gmail.com
+    TaxIdentification:
+      maxLength: 35
+      minLength: 1
+      type: string
+      description: Contains party tax identifier.
+    Pan:
+      maxLength: 35
+      type: string
+      description: Primary Account Number according to ISO/IEC 7812.
+      example: "5409050000000000"
+    ExternalPaymentId:
+      type: string
+      description: |
+        ExternalPaymentID is assigned by API consumers in order to search payments by known to the
+          consumer payment identifier. In order to avoid payment duplication value passed in ExternalPaymentID
+          must be unique and the use of the same value must cause user error (HTTP status code 400).
+      example: PAY-21765-AF
+    Date:
+      type: string
+      format: date
+      example: 2020-05-05
+    PaymentId:
+      type: string
+      description: |
+        PaymentId is assigned by API provider in order to uniquely identify resources created when a valid payment
+        initiation request is processed.
+      example: 1234-wertiq-983
+    StatusDescription:
+      type: string
+      description: Description of payment status.
+      example: payment init accepted
+    Intermediary:
+      type: object
+      properties:
+        account:
+          $ref: '#/components/schemas/IntermediaryAccount'
+        agent:
+          $ref: '#/components/schemas/AccountAgent'
+      description: Agent and Account between the debtor and the creditor.
+    IntermediaryAccount:
+      required:
+      - identification
+      type: object
+      properties:
+        identification:
+          $ref: '#/components/schemas/IntermediaryAccountIdentification'
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+      description: Account identification.
+    IntermediaryAccountIdentification:
+      type: object
+      properties:
+        iban:
+          maxLength: 34
+          minLength: 1
+          pattern: "^[A-Z]{2,2}[0-9]{2,2}[a-zA-Z0-9]{1,30}$"
+          type: string
+          description: Account IBAN.
+          example: AT913225000000420018
+        otherIdentification:
+          $ref: '#/components/schemas/OtherId'
+      description: Required iban or otherId.
+    OtherId:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/OtherUniqueIdentification'
+        issuer:
+          maxLength: 35
+          minLength: 1
+          type: string
+        scheme:
+          $ref: '#/components/schemas/OtherScheme'
+      description: Other identification of an account or agent.
+    OtherUniqueIdentification:
+      maxLength: 35
+      minLength: 1
+      type: string
+      description: Other unique identification.
+      example: MCCT1306251365420971215
+    OtherScheme:
+      type: object
+      properties:
+        code:
+          maxLength: 4
+          minLength: 1
+          type: string
+        proprietary:
+          maxLength: 35
+          minLength: 1
+          type: string
+    AccountAgent:
+      required:
+      - financialInstitutionIdentification
+      type: object
+      properties:
+        financialInstitutionIdentification:
+          $ref: '#/components/schemas/FinancialInstitutionIdentification'
+      description: The Financial institution which is servicing an account. Either
+        BIC name of otherID are required.
+    FinancialInstitutionIdentification:
+      type: object
+      properties:
+        bic:
+          $ref: '#/components/schemas/Bicfi'
+        name:
+          maxLength: 140
+          minLength: 1
+          type: string
+          description: Name of the account servicing institution. Only used for creditor
+            agent.
+          example: EXAMPLE BANK
+        otherIdentification:
+          $ref: '#/components/schemas/OtherId'
+    ExchangeRateInformation:
+      required:
+      - contractId
+      type: object
+      properties:
+        exchangeRate:
+          maxLength: 11
+          minLength: 1
+          type: string
+          description: Exchange rate.
+          example: "1.54"
+        rateType:
+          $ref: '#/components/schemas/RateType'
+        contractId:
+          $ref: '#/components/schemas/OtherUniqueIdentification'
+      description: Set of elements used to provide details on the currency exchange
+        rate and contract.
+    RateType:
+      type: string
+      example: AGRD
+      enum:
+      - SPOT
+      - SALE
+      - AGRD
+    PostSingleCreditTransferResponse:
+      allOf:
+      - $ref: '#/components/schemas/DomesticSingleCreditTransfer'
+    PostSingleCreditTransferRequest:
+      $ref: '#/components/schemas/DomesticSingleCreditTransferInitiation'
+  responses:
+    PostSingleCreditTransferResponse:
+      description: Response body with created credit transfer details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PostSingleCreditTransferResponse'
+    ErrorResponse:
+      description: Unexpected Error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  parameters:
+    PaymentId:
+      name: paymentId
+      in: path
+      description: Unique Identification of the payment.
+      required: true
+      style: simple
+      explode: false
+      schema:
+        maxLength: 35
+        type: string
+    X-Request-ID:
+      name: X-Request-ID
+      in: header
+      description: "ID of the request, unique to the call, as determined by the initiating\
+        \ party."
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+        format: uuid
+      example: 99391c7e-ad88-49ec-a2ad-99ddcb1f7721
+    X-Correlation-ID:
+      name: X-Correlation-ID
+      in: header
+      description: "X-Correlation-ID will be used to track requests through all involved\
+        \ services to be able to graph request flows, map how services contribute\
+        \ to response times, identify bottle necks, etc. The X-Correlation-ID must\
+        \ be propagated unchanged in any and all downstream service calls to other\
+        \ Newton Microservices as well as NWU services. Multiple calls from Newton\
+        \ services to NWU services will potentially have equal X-Correlation-ID values."
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+        format: uuid
+      example: 99391c7e-ad88-49ec-a2ad-99ddcb1f7721
+    X-Idempotency-Key:
+      name: X-Idempotency-Key
+      in: header
+      description: Unique request identifier to support idempotency.
+      required: false
+      style: simple
+      explode: false
+      schema:
+        maxLength: 40
+        type: string
+      example: e457b5a2e4d86bd1198ee56343ba864fe8b2
+    ExternalPaymentIdFilter:
+      name: externalPaymentId
+      in: query
+      description: External payment identifier.
+      required: false
+      style: form
+      explode: true
+      schema:
+        $ref: '#/components/schemas/ExternalPaymentId'
+    DateFromFilter:
+      name: dateFrom
+      in: query
+      description: Payment intitiated from the date until now.
+      required: false
+      style: form
+      explode: true
+      schema:
+        $ref: '#/components/schemas/Date'
+    PaymentTypeFilter:
+      name: paymentType
+      in: query
+      description: "Payment of listed type [DOMESTIC, SEPA, FOREIGN]."
+      required: false
+      style: form
+      explode: false
+      schema:
+        minItems: 1
+        type: array
+        items:
+          type: string
+          enum:
+          - DOMESTIC
+          - SEPA
+          - FOREIGN
+    IncludeRejectedFilter:
+      name: includeRejected
+      in: query
+      description: Include rejected or cancelled payments.
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: boolean
+  requestBodies:
+    PostSingleCreditTransferRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PostSingleCreditTransferRequest'
+          example:
+            paymentType: DOMESTIC
+            externalPaymentId: AT-9809-98876
+            amount:
+              type: INSTRUCTED
+              currency: CAD
+              amount: 123.45
+            creditorAccount:
+              accountReferenceType: PAN
+              pan: "1234567898765432"
+              currency: EUR
+            creditor:
+              name: Merchant123
+              address:
+                addressLine1: Rue blue 89
+                addressLine2: 75000 Paris
+                country: FR
+            debtorAccount:
+              accountReferenceType: IBAN
+              currency: EUR
+              iban: FR7612345987650123456789014
+            requestedExecutionDate: 2018-05-05
+      required: true
+  securitySchemes:
+    openId:
+      type: openIdConnect
+      openIdConnectUrl: /.well-known/openid-configuration
