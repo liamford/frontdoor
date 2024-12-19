@@ -18,7 +18,7 @@ servers:
   description: SwaggerHub API Auto Mocking
 tags:
 - name: Submit Payment
-  description: Submit Payment API for single payment.
+  description: Submit Payment API for single domestic payment.
 paths:
   /api/payments/v1/submit-payment:
     post:
