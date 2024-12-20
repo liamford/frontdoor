@@ -14,6 +14,23 @@ paths:
       summary: Initiate a payment
       description: Initiates a simple payment.
       operationId: initiatePayment
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        description: Correlation ID for the request
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: X-Idempotency-Key
+        in: header
+        description: Idempotency key for the request
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -56,16 +73,20 @@ components:
         amount:
           type: number
           description: Amount to be transferred
+          example: 100.5
         currency:
           type: string
           description: Currency of the amount
+          example: USD
         paymentReference:
           type: string
           description: Reference for the payment
+          example: INV123456
         paymentDate:
           type: string
           description: Date of the payment
           format: date
+          example: 2023-10-01
     Account:
       required:
       - accountNumber
@@ -74,18 +95,22 @@ components:
         accountNumber:
           type: string
           description: Account number
+          example: "123456789"
         accountName:
           type: string
           description: Account name
+          example: John Doe
     PaymentResponse:
       type: object
       properties:
         paymentId:
           type: string
           description: Unique identifier for the payment
+          example: "987654321"
         status:
           type: string
           description: ISO payment status
+          example: ACTC
           enum:
           - ACTC
           - ACSP
@@ -97,6 +122,8 @@ components:
         code:
           type: string
           description: Error code
+          example: ERR001
         message:
           type: string
           description: Error message
+          example: Invalid request parameters
