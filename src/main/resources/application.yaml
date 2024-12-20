@@ -3,5 +3,7 @@ spring:
     name: frontdoor
 server:
   port: 8080
+  error:
+    include-stacktrace: on_param
   servlet:
     context-path: /api
