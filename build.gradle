@@ -31,6 +31,7 @@ dependencies {
 	implementation 'io.springfox:springfox-swagger2:2.9.2'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'jakarta.validation:jakarta.validation-api:2.0.2'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
 	swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.52'  // or Swagger Codegen V3
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -64,4 +65,13 @@ sourceSets.main.java.srcDir "${swaggerSources.payment.code.outputDir}/src/main/j
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+configurations.configureEach {
+	resolutionStrategy.eachDependency { details ->
+		if (details.requested.group == 'org.apache.tomcat.embed' && details.requested.name == 'tomcat-embed-core') {
+			details.useVersion("10.1.34")
+			details.because("CVE-2024-50379")
+		}
+	}
 }

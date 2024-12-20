@@ -23,13 +23,14 @@ import java.util.UUID;
 @RestController
 public class PaymentController {
 
-    @PostMapping("/submit-payment")
+    @PostMapping(value = "/submit-payment", consumes = "application/json")
     public ResponseEntity<PaymentResponse> payment(@RequestHeader HttpHeaders headers,
-                                                   @RequestBody @Valid PaymentRequest request,
+                                                   final @RequestBody @Valid PaymentRequest request,
                                                    BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             throw new PaymentValidationException("Validation error");
         }
+
         String correlationId = headers.getFirst("x-correlation-id");
         String idempotencyKey = headers.getFirst("x-idempotency-key");
         log.info("Payment request received with payment reference: {} - correlationId: {}",
