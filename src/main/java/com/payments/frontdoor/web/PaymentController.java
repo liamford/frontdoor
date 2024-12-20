@@ -1,6 +1,5 @@
 package com.payments.frontdoor.web;
 
-
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.IdempotencyMissingException;
 import com.payments.frontdoor.exception.PaymentValidationException;
@@ -32,10 +31,17 @@ public class PaymentController {
         }
 
         String correlationId = headers.getFirst("x-correlation-id");
+        if (correlationId == null || correlationId.isEmpty()) {
+            throw new PaymentValidationException("X-Correlation-ID header is missing or empty");
+        }
+
         String idempotencyKey = headers.getFirst("x-idempotency-key");
+        if (idempotencyKey == null || idempotencyKey.isEmpty()) {
+            throw new IdempotencyMissingException("Idempotency key is missing or empty");
+        }
+
         log.info("Payment request received with payment reference: {} - correlationId: {}",
-                request.getPaymentReference()
-                , correlationId);
+                request.getPaymentReference(), correlationId);
 
         validateIdempotencyKey(idempotencyKey, request.getPaymentReference());
         PaymentResponse response = createPaymentResponse();
@@ -43,13 +49,11 @@ public class PaymentController {
     }
 
     private void validateIdempotencyKey(String idempotencyKey, String paymentReference) {
-        if (idempotencyKey == null || idempotencyKey.isEmpty()) {
-            throw new IdempotencyMissingException("Idempotency key is missing or empty");
-        }
         if (!idempotencyKey.equals(paymentReference)) {
             throw new IdempotencyKeyMismatchException("Idempotency key does not match payment reference");
         }
     }
+
     private PaymentResponse createPaymentResponse() {
         PaymentResponse response = new PaymentResponse();
         response.setPaymentId(UUID.randomUUID().toString());
