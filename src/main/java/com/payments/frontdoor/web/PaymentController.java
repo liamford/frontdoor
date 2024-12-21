@@ -20,11 +20,12 @@ import java.util.UUID;
 @RestController
 public class PaymentController {
 
-    @PostMapping(value = "/submit-payment", consumes = "application/json")
+    @PostMapping(value = "/submit-payment", consumes = "application/json", produces = "application/json")
     public ResponseEntity<PaymentResponse> payment(
             @RequestHeader(name = "x-correlation-id") String correlationId,
             @RequestHeader(name = "x-idempotency-key") String idempotencyKey,
             final @RequestBody @Valid PaymentRequest request,
+
             BindingResult bindingResult) {
 
         log.info("Received payment request: {} - correlationId: {}", request, correlationId);
