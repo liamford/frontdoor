@@ -28,7 +28,7 @@ public class PaymentController {
 
             BindingResult bindingResult) {
 
-        log.info("Received payment request: {} - correlationId: {}", request, correlationId);
+        log.info("Received payment request: {} - correlationId: {}", request.getPaymentReference(), correlationId);
 
         if (bindingResult.hasErrors()) {
             throw new PaymentValidationException("Validation error");
@@ -38,7 +38,7 @@ public class PaymentController {
         validateIdempotencyKey(idempotencyKey, request.getPaymentReference());
         PaymentResponse response = createPaymentResponse();
 
-        log.info("Payment Created with paymentId: {}", response);
+        log.info("Payment Created with paymentId: {}", response.getPaymentId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
