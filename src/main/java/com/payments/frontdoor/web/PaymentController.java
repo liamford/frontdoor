@@ -1,12 +1,10 @@
 package com.payments.frontdoor.web;
 
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
-import com.payments.frontdoor.exception.IdempotencyMissingException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.swagger.model.PaymentRequest;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -23,28 +21,23 @@ import java.util.UUID;
 public class PaymentController {
 
     @PostMapping(value = "/submit-payment", consumes = "application/json")
-    public ResponseEntity<PaymentResponse> payment(@RequestHeader HttpHeaders headers,
-                                                   final @RequestBody @Valid PaymentRequest request,
-                                                   BindingResult bindingResult) {
+    public ResponseEntity<PaymentResponse> payment(
+            @RequestHeader(name = "x-correlation-id") String correlationId,
+            @RequestHeader(name = "x-idempotency-key") String idempotencyKey,
+            final @RequestBody @Valid PaymentRequest request,
+            BindingResult bindingResult) {
+
+        log.info("Received payment request: {} - correlationId: {}", request, correlationId);
+
         if (bindingResult.hasErrors()) {
             throw new PaymentValidationException("Validation error");
         }
 
-        String correlationId = headers.getFirst("x-correlation-id");
-        if (correlationId == null || correlationId.isEmpty()) {
-            throw new PaymentValidationException("X-Correlation-ID header is missing or empty");
-        }
-
-        String idempotencyKey = headers.getFirst("x-idempotency-key");
-        if (idempotencyKey == null || idempotencyKey.isEmpty()) {
-            throw new IdempotencyMissingException("Idempotency key is missing or empty");
-        }
-
-        log.info("Payment request received with payment reference: {} - correlationId: {}",
-                request.getPaymentReference(), correlationId);
 
         validateIdempotencyKey(idempotencyKey, request.getPaymentReference());
         PaymentResponse response = createPaymentResponse();
+
+        log.info("Payment Created with paymentId: {}", response);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

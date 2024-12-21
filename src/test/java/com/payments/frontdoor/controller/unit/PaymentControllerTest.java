@@ -4,8 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
-import com.payments.frontdoor.exception.IdempotencyMissingException;
-import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.swagger.model.Account;
 import com.payments.frontdoor.swagger.model.PaymentRequest;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
@@ -21,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MissingRequestHeaderException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -49,7 +48,7 @@ public class PaymentControllerTest {
     public void testPaymentCorrelationIdValidationError() throws Exception {
         mockMvc.perform(performPostRequest())
                 .andExpect(status().isBadRequest())
-                .andExpect(result -> assertInstanceOf(PaymentValidationException.class, result.getResolvedException()));
+                .andExpect(result -> assertInstanceOf(MissingRequestHeaderException.class, result.getResolvedException()));
     }
 
     @Test
@@ -58,7 +57,7 @@ public class PaymentControllerTest {
         mockMvc.perform(performPostRequest()
                 .header("x-correlation-id", "123456"))
                 .andExpect(status().isBadRequest())
-                .andExpect(result -> assertInstanceOf(IdempotencyMissingException.class, result.getResolvedException()));
+                .andExpect(result -> assertInstanceOf(MissingRequestHeaderException.class, result.getResolvedException()));
     }
 
     @Test
