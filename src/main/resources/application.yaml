@@ -6,4 +6,4 @@ server:
   error:
     include-stacktrace: on_param
   servlet:
-    context-path: /api
+    context-path: /api/payments/v1
