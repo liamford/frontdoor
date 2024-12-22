@@ -5,6 +5,7 @@ plugins {
 	id 'org.hidetake.swagger.generator' version '2.19.2'
 	id 'idea'
 	id 'io.gatling.gradle' version '3.13.1.2'
+	id 'com.palantir.docker' version '0.36.0'
 }
 
 group = 'com.payments'
@@ -65,6 +66,13 @@ idea {
 		inheritOutputDirs = false
 		outputDir = swaggerSources.payment.code.outputDir
 	}
+}
+
+docker {
+	name project.name + ":" + version
+	dockerfile file('Dockerfile')
+	files tasks.bootJar.outputs.files
+	buildArgs(['JAR_FILE': tasks.bootJar.outputs.files.singleFile.name])
 }
 
 
