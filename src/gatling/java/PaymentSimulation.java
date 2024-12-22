@@ -22,6 +22,7 @@ public class PaymentSimulation extends Simulation {
                             .header("x-idempotency-key", "INV123456")
                             .body(StringBody("{ \"debtor\": { \"accountNumber\": \"123456789\", \"accountName\": \"John Doe\" }, \"creditor\": { \"accountNumber\": \"123456789\", \"accountName\": \"John Doe\" }, \"amount\": 100.5, \"currency\": \"USD\", \"paymentReference\": \"INV123456\", \"paymentDate\": \"2023-10-01\" }"))
                             .check(status().is(201))
+                            .check(responseTimeInMillis().lt(500))
             );
 
     {
