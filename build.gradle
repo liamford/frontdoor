@@ -69,7 +69,7 @@ idea {
 }
 
 docker {
-	name project.name + ":" + version
+	name "${project.name}:latest"
 	dockerfile file('Dockerfile')
 	files tasks.bootJar.outputs.files
 	buildArgs(['JAR_FILE': tasks.bootJar.outputs.files.singleFile.name])
