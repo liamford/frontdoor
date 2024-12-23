@@ -7,6 +7,7 @@ plugins {
 	id 'io.gatling.gradle' version '3.13.1.2'
 	id 'com.palantir.docker' version '0.36.0'
 	id "io.snyk.gradle.plugin.snykplugin" version "0.7.0"
+	id 'jacoco'
 }
 
 group = 'com.payments'
@@ -62,6 +63,18 @@ swaggerSources {
 	}
 }
 
+
+jacocoTestReport {
+	reports {
+		xml.required = true
+		html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+	}
+}
+
+tasks.named("check") {
+	it.dependsOn(tasks.named("jacocoTestReport"))
+}
+
 snyk {
 	arguments = '--all-sub-projects'
 	severity = 'high'
@@ -83,7 +96,6 @@ docker {
 	files tasks.bootJar.outputs.files
 	buildArgs(['JAR_FILE': tasks.bootJar.outputs.files.singleFile.name])
 }
-
 
 compileJava.dependsOn swaggerSources.payment.code
 sourceSets.main.java.srcDir "${swaggerSources.payment.code.outputDir}/src/main/java"
@@ -107,7 +119,5 @@ configurations.configureEach {
 			details.useVersion '1.5.15'
 			details.because("CVE-2024-12798")
 		}
-
-
 	}
 }
