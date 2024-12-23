@@ -5,7 +5,6 @@ plugins {
 	id 'org.hidetake.swagger.generator' version '2.19.2'
 	id 'idea'
 	id 'io.gatling.gradle' version '3.13.1.2'
-	id "io.snyk.gradle.plugin.snykplugin" version "0.7.0"
 	id 'jacoco'
 }
 
@@ -74,13 +73,6 @@ tasks.named("check") {
 	it.dependsOn(tasks.named("jacocoTestReport"))
 }
 
-snyk {
-	arguments = '--all-sub-projects'
-	severity = 'high'
-	api = project.findProperty("snykApiToken") ?: System.getenv('SNYK_TOKEN')
-	autoDownload = true
-	autoUpdate = true
-}
 
 idea {
 	module {
