@@ -6,6 +6,7 @@ plugins {
 	id 'idea'
 	id 'io.gatling.gradle' version '3.13.1.2'
 	id 'com.palantir.docker' version '0.36.0'
+	id "io.snyk.gradle.plugin.snykplugin" version "0.7.0"
 }
 
 group = 'com.payments'
@@ -59,6 +60,14 @@ swaggerSources {
 			configFile = file('src/main/resources/api/config.json')
 		}
 	}
+}
+
+snyk {
+	arguments = '--all-sub-projects'
+	severity = 'high'
+	api = project.findProperty("snykApiToken") ?: System.getenv('SNYK_TOKEN')
+	autoDownload = true
+	autoUpdate = true
 }
 
 idea {
