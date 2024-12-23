@@ -30,7 +30,7 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'io.springfox:springfox-swagger2:2.10.0'
+	implementation 'io.springfox:springfox-swagger2:3.0.0'
 	implementation 'com.fasterxml.jackson.core:jackson-core:2.18.2'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -69,7 +69,7 @@ idea {
 }
 
 docker {
-	name "${project.name}:latest"
+	name project.name + ':latest'
 	dockerfile file('Dockerfile')
 	files tasks.bootJar.outputs.files
 	buildArgs(['JAR_FILE': tasks.bootJar.outputs.files.singleFile.name])
@@ -93,5 +93,12 @@ configurations.configureEach {
 			details.useVersion("10.1.34")
 			details.because("CVE-2024-50379")
 		}
+
+		if (details.requested.group == 'ch.qos.logback') {
+			details.useVersion '1.5.15'
+			details.because("CVE-2024-12798")
+		}
+
+
 	}
 }
