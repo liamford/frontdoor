@@ -95,6 +95,11 @@ jobs:
       - name: Push Docker image (sha)
         run: docker push ${{ secrets.DOCKER_USERNAME }}/frontdoor:${{ github.sha }}
 
+      - name: Cleanup Docker artifacts
+        run: |
+          rm frontdoor_latest.tar
+          rm frontdoor_sha.tar
+
   codeql:
     name: Analyze
     runs-on: ubuntu-latest
