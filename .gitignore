@@ -35,3 +35,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Snyk
+.snyk
+snyk-report.json
+snyk-test-results/
