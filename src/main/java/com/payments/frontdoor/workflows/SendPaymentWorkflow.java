@@ -1,6 +1,7 @@
 package com.payments.frontdoor.workflows;
 
 
+import com.payments.frontdoor.swagger.model.PaymentResponse;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import model.PaymentDetails;
@@ -9,6 +10,6 @@ import model.PaymentDetails;
 public interface SendPaymentWorkflow {
 
     @WorkflowMethod
-    void processPayment(PaymentDetails input);
+    PaymentResponse processPayment(PaymentDetails input);
 
 }

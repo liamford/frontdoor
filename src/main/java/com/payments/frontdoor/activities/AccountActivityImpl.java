@@ -1,5 +1,6 @@
 package com.payments.frontdoor.activities;
 
+import com.payments.frontdoor.swagger.model.PaymentResponse.StatusEnum;
 import io.temporal.spring.boot.ActivityImpl;
 import lombok.extern.slf4j.Slf4j;
 import model.PaymentDetails;
@@ -30,54 +31,54 @@ public class AccountActivityImpl implements AccountActivity {
     }
 
     @Override
-    public String executePayment(PaymentInstruction instruction) {
+    public StatusEnum executePayment(PaymentInstruction instruction) {
         log.info("Executing payment: {}", instruction);
-        return ActivityStepStatus.EXECUTED.getStatus();
+        return StatusEnum.ACSP;
     }
 
     @Override
-    public String clearAndSettlePayment(PaymentInstruction instruction) {
+    public StatusEnum clearAndSettlePayment(PaymentInstruction instruction) {
         log.info("Clearing and settling payment: {}", instruction);
-        return ActivityStepStatus.CLEARED.getStatus();
+        return StatusEnum.ACSC;
     }
 
     @Override
-    public String sendNotification(PaymentInstruction instruction) {
+    public StatusEnum sendNotification(PaymentInstruction instruction) {
         log.info("Sending notification for payment: {}", instruction);
-        return ActivityStepStatus.NOTIFIED.getStatus();
+        return StatusEnum.ACSP;
     }
 
     @Override
-    public String reconcilePayment(PaymentInstruction instruction) {
+    public StatusEnum reconcilePayment(PaymentInstruction instruction) {
         log.info("Reconciling payment: {}", instruction);
-        return ActivityStepStatus.RECONCILED.getStatus();
+        return StatusEnum.ACSP;
     }
 
     @Override
-    public String postPayment(PaymentInstruction instruction) {
+    public StatusEnum postPayment(PaymentInstruction instruction) {
         log.info("Posting payment to ledger: {}", instruction);
         if (instruction.getDebtor().equals(instruction.getCreditor())) {
             throw new IllegalArgumentException("Debtor and creditor accounts are same");
         }
-        return ActivityStepStatus.POSTED.getStatus();
+        return StatusEnum.ACSP;
     }
 
     @Override
-    public String generateReports(PaymentInstruction instruction) {
+    public StatusEnum generateReports(PaymentInstruction instruction) {
         log.info("Generating reports for payment: {}", instruction);
-        return ActivityStepStatus.REPORTED.getStatus();
+        return StatusEnum.ACSP;
     }
 
     @Override
-    public String archivePayment(PaymentInstruction instruction) {
+    public StatusEnum archivePayment(PaymentInstruction instruction) {
         log.info("Archiving payment: {}", instruction);
-        return ActivityStepStatus.ARCHIVED.getStatus();
+        return StatusEnum.ACSP;
     }
 
     @Override
-    public String refundPayment(PaymentInstruction instruction) {
+    public StatusEnum refundPayment(PaymentInstruction instruction) {
         log.info("Refunding payment: {}", instruction);
-        return ActivityStepStatus.REFUND.getStatus();
+        return StatusEnum.RJCT;
     }
 
     private PaymentInstruction convertToPaymentInstruction(PaymentDetails details) {

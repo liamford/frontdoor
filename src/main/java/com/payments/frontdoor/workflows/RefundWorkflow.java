@@ -1,5 +1,6 @@
 package com.payments.frontdoor.workflows;
 
+import com.payments.frontdoor.swagger.model.PaymentResponse;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import model.PaymentInstruction;
@@ -8,6 +9,6 @@ import model.PaymentInstruction;
 public interface RefundWorkflow {
 
     @WorkflowMethod
-    void processRefund(PaymentInstruction instruction);
+    PaymentResponse processRefund(PaymentInstruction instruction);
 
 }

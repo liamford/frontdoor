@@ -1,5 +1,6 @@
 package com.payments.frontdoor.activities;
 
+import com.payments.frontdoor.swagger.model.PaymentResponse.StatusEnum;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import model.PaymentDetails;
@@ -18,26 +19,26 @@ public interface AccountActivity {
     boolean authorizePayment(PaymentInstruction instruction);
 
     @ActivityMethod
-    String executePayment(PaymentInstruction instruction);
+    StatusEnum executePayment(PaymentInstruction instruction);
 
     @ActivityMethod
-    String clearAndSettlePayment(PaymentInstruction instruction);
+    StatusEnum clearAndSettlePayment(PaymentInstruction instruction);
 
     @ActivityMethod
-    String sendNotification(PaymentInstruction instruction);
+    StatusEnum sendNotification(PaymentInstruction instruction);
 
     @ActivityMethod
-    String reconcilePayment(PaymentInstruction instruction);
+    StatusEnum reconcilePayment(PaymentInstruction instruction);
 
     @ActivityMethod
-    String postPayment(PaymentInstruction instruction);
+    StatusEnum postPayment(PaymentInstruction instruction);
 
     @ActivityMethod
-    String generateReports(PaymentInstruction instruction);
+    StatusEnum generateReports(PaymentInstruction instruction);
 
     @ActivityMethod
-    String archivePayment(PaymentInstruction instruction);
+    StatusEnum archivePayment(PaymentInstruction instruction);
 
     @ActivityMethod
-    String refundPayment(PaymentInstruction instruction);
+    StatusEnum refundPayment(PaymentInstruction instruction);
 }

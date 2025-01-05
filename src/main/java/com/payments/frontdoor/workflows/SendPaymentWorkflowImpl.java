@@ -1,7 +1,9 @@
 package com.payments.frontdoor.workflows;
 
 
+import com.payments.frontdoor.PaymentUtil;
 import com.payments.frontdoor.activities.AccountActivity;
+import com.payments.frontdoor.swagger.model.PaymentResponse;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.spring.boot.WorkflowImpl;
@@ -53,8 +55,7 @@ public class SendPaymentWorkflowImpl implements SendPaymentWorkflow {
 
 
     @Override
-    public void processPayment(PaymentDetails paymentDetails) {
-
+    public PaymentResponse processPayment(PaymentDetails paymentDetails) {
 
         PaymentInstruction instruction = activities.initiatePayment(paymentDetails);
 
@@ -68,16 +69,16 @@ public class SendPaymentWorkflowImpl implements SendPaymentWorkflow {
         boolean isAuthorized = isAuthorizedPromise.get();
 
         if (!isOrderValid || !isAuthorized) {
-            throw new RuntimeException("Payment validation or authorization failed.");
+            throw new IllegalArgumentException("Payment validation or authorization failed.");
         }
 
         // Step 4: Execute Payment
         activities.executePayment(instruction);
 
         // Steps 5, 6, & 7: Run Clearing, Notification, and Reconciliation in Parallel
-        Promise<String> clearAndSettlePromise = Async.function(activities::clearAndSettlePayment, instruction);
-        Promise<String> sendNotificationPromise = Async.function(activities::sendNotification, instruction);
-        Promise<String> reconcilePromise = Async.function(activities::reconcilePayment, instruction);
+        Promise<PaymentResponse.StatusEnum> clearAndSettlePromise = Async.function(activities::clearAndSettlePayment, instruction);
+        Promise<PaymentResponse.StatusEnum> sendNotificationPromise = Async.function(activities::sendNotification, instruction);
+        Promise<PaymentResponse.StatusEnum> reconcilePromise = Async.function(activities::reconcilePayment, instruction);
 
         Promise.allOf(clearAndSettlePromise, sendNotificationPromise, reconcilePromise).get();
 
@@ -104,6 +105,8 @@ public class SendPaymentWorkflowImpl implements SendPaymentWorkflow {
         activities.archivePayment(instruction);
 
         Workflow.getLogger(SendPaymentWorkflowImpl.class).info("Payment processing workflow completed.");
+
+        return PaymentUtil.createPaymentResponse(instruction.getPaymentId(), PaymentResponse.StatusEnum.ACSC);
 
     }
 

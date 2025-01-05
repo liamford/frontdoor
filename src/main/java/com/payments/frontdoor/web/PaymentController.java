@@ -1,5 +1,6 @@
 package com.payments.frontdoor.web;
 
+import com.payments.frontdoor.PaymentUtil;
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.service.PaymentProcessService;
@@ -46,7 +47,8 @@ public class PaymentController {
         String workflowId = request.getPaymentReference();
         paymentProcessService.processPaymentAsync(paymentDetails, workflowId);
 
-        PaymentResponse response = createPaymentResponse(uetr);
+        PaymentResponse response = PaymentUtil.createPaymentResponse(uetr, PaymentResponse.StatusEnum.ACTC);
+
         log.info("Payment Created with paymentId: {}", response.getPaymentId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -70,10 +72,4 @@ public class PaymentController {
         }
     }
 
-    private PaymentResponse createPaymentResponse(String uetr) {
-        PaymentResponse response = new PaymentResponse();
-        response.setPaymentId(uetr);
-        response.setStatus(PaymentResponse.StatusEnum.ACTC);
-        return response;
-    }
 }

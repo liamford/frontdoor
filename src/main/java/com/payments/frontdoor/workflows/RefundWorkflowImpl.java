@@ -1,6 +1,8 @@
 package com.payments.frontdoor.workflows;
 
+import com.payments.frontdoor.PaymentUtil;
 import com.payments.frontdoor.activities.AccountActivity;
+import com.payments.frontdoor.swagger.model.PaymentResponse;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.spring.boot.WorkflowImpl;
@@ -33,7 +35,8 @@ public class RefundWorkflowImpl implements RefundWorkflow {
     private final AccountActivity activities = Workflow.newActivityStub(AccountActivity.class, defaultActivityOptions);
 
     @Override
-    public void processRefund(PaymentInstruction instruction) {
+    public PaymentResponse processRefund(PaymentInstruction instruction) {
         activities.executePayment(instruction);
+        return PaymentUtil.createPaymentResponse(instruction.getPaymentId(), PaymentResponse.StatusEnum.RJCT);
     }
 }
