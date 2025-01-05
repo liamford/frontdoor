@@ -2,6 +2,17 @@
 spring:
   application:
     name: frontdoor
+  temporal:
+    namespace: default
+    connection:
+      target: 127.0.0.1:7233
+    workers:
+      - name: send-payment-worker
+        task-queue: payment_subscription
+    workersAutoDiscovery:
+      packages:
+        - com.payments.frontdoor.workflows
+        - com.payments.frontdoor.activities
   profiles:
     active: local
 server:

@@ -36,6 +36,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'jakarta.validation:jakarta.validation-api:2.0.2'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'io.temporal:temporal-spring-boot-starter-alpha:1.23.2'
 	swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.52'  // or Swagger Codegen V3
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'

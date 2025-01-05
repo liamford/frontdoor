@@ -2,9 +2,11 @@ package com.payments.frontdoor.web;
 
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
+import com.payments.frontdoor.service.PaymentProcessService;
 import com.payments.frontdoor.swagger.model.PaymentRequest;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import lombok.extern.slf4j.Slf4j;
+import model.PaymentDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -18,14 +20,16 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
+@lombok.AllArgsConstructor
 public class PaymentController {
+
+    private final PaymentProcessService paymentProcessService;
 
     @PostMapping(value = "/submit-payment", consumes = "application/json", produces = "application/json")
     public ResponseEntity<PaymentResponse> payment(
             @RequestHeader(name = "x-correlation-id") String correlationId,
             @RequestHeader(name = "x-idempotency-key") String idempotencyKey,
             final @RequestBody @Valid PaymentRequest request,
-
             BindingResult bindingResult) {
 
         log.info("Received payment request: {} - correlationId: {}", request.getPaymentReference(), correlationId);
@@ -34,12 +38,30 @@ public class PaymentController {
             throw new PaymentValidationException("Validation error");
         }
 
-
         validateIdempotencyKey(idempotencyKey, request.getPaymentReference());
-        PaymentResponse response = createPaymentResponse();
+        String uetr = UUID.randomUUID().toString();
 
+        PaymentDetails paymentDetails = getPaymentDetails(request, uetr);
+
+        String workflowId = request.getPaymentReference();
+        paymentProcessService.processPaymentAsync(paymentDetails, workflowId);
+
+        PaymentResponse response = createPaymentResponse(uetr);
         log.info("Payment Created with paymentId: {}", response.getPaymentId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    private PaymentDetails getPaymentDetails(PaymentRequest request, String uetr) {
+        return PaymentDetails.builder()
+                .paymentStatus(PaymentResponse.StatusEnum.ACTC.toString())
+                .paymentId(uetr)
+                .debtor(request.getDebtor())
+                .creditor(request.getCreditor())
+                .amount(request.getAmount())
+                .currency(request.getCurrency())
+                .paymentReference(request.getPaymentReference())
+                .paymentDate(request.getPaymentDate())
+                .build();
     }
 
     private void validateIdempotencyKey(String idempotencyKey, String paymentReference) {
@@ -48,9 +70,9 @@ public class PaymentController {
         }
     }
 
-    private PaymentResponse createPaymentResponse() {
+    private PaymentResponse createPaymentResponse(String uetr) {
         PaymentResponse response = new PaymentResponse();
-        response.setPaymentId(UUID.randomUUID().toString());
+        response.setPaymentId(uetr);
         response.setStatus(PaymentResponse.StatusEnum.ACTC);
         return response;
     }
