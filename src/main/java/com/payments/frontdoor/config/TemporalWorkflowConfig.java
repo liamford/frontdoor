@@ -1,6 +1,6 @@
 package com.payments.frontdoor.config;
 
-import com.payments.frontdoor.workflows.SendPaymentWorkflow;
+import com.payments.frontdoor.workflows.PaymentWorkflow;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import org.springframework.context.annotation.Bean;
@@ -17,15 +17,15 @@ public class TemporalWorkflowConfig {
     }
 
     @Bean
-    public SendPaymentWorkflow sendPaymentWorkflow(WorkflowClient workflowClient, WorkflowOptions workflowOptions) {
-        return workflowClient.newWorkflowStub(SendPaymentWorkflow.class, workflowOptions);
+    public PaymentWorkflow sendPaymentWorkflow(WorkflowClient workflowClient, WorkflowOptions workflowOptions) {
+        return workflowClient.newWorkflowStub(PaymentWorkflow.class, workflowOptions);
     }
 
-    public SendPaymentWorkflow sendPaymentWorkflowWithId(WorkflowClient workflowClient, String workflowId) {
+    public PaymentWorkflow sendPaymentWorkflowWithId(WorkflowClient workflowClient, String workflowId) {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setTaskQueue("payment_subscription")
                 .setWorkflowId(workflowId)
                 .build();
-        return workflowClient.newWorkflowStub(SendPaymentWorkflow.class, options);
+        return workflowClient.newWorkflowStub(PaymentWorkflow.class, options);
     }
 }

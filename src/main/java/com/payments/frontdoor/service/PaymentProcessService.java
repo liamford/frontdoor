@@ -1,7 +1,7 @@
 package com.payments.frontdoor.service;
 
 import com.payments.frontdoor.config.TemporalWorkflowConfig;
-import com.payments.frontdoor.workflows.SendPaymentWorkflow;
+import com.payments.frontdoor.workflows.PaymentWorkflow;
 import io.temporal.client.WorkflowClient;
 import lombok.AllArgsConstructor;
 import model.PaymentDetails;
@@ -17,7 +17,7 @@ public class PaymentProcessService {
 
     @Async
     public void processPaymentAsync(PaymentDetails paymentDetails, String workflowId) {
-        SendPaymentWorkflow workflow = temporalWorkflowConfig.sendPaymentWorkflowWithId(workflowClient, workflowId);
+        PaymentWorkflow workflow = temporalWorkflowConfig.sendPaymentWorkflowWithId(workflowClient, workflowId);
         WorkflowClient.start(workflow::processPayment, paymentDetails);
     }
 }

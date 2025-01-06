@@ -7,7 +7,7 @@ import model.PaymentDetails;
 import model.PaymentInstruction;
 
 @ActivityInterface
-public interface AccountActivity {
+public interface PaymentActivity {
 
     @ActivityMethod
     PaymentInstruction initiatePayment(PaymentDetails input);

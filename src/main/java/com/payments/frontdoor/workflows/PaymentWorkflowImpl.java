@@ -2,7 +2,7 @@ package com.payments.frontdoor.workflows;
 
 
 import com.payments.frontdoor.PaymentUtil;
-import com.payments.frontdoor.activities.AccountActivity;
+import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
@@ -21,7 +21,7 @@ import java.util.Map;
 
 @WorkflowImpl(workers = "send-payment-worker")
 @Slf4j
-public class SendPaymentWorkflowImpl implements SendPaymentWorkflow {
+public class PaymentWorkflowImpl implements PaymentWorkflow {
     private static final String INITIATE = "initiatePayment";
 
     // RetryOptions specify how to automatically handle retries when Activities fail
@@ -51,7 +51,7 @@ public class SendPaymentWorkflowImpl implements SendPaymentWorkflow {
     }};
 
     // ActivityStubs enable calls to methods as if the Activity object is local but actually perform an RPC invocation
-    private final AccountActivity activities = Workflow.newActivityStub(AccountActivity.class, defaultActivityOptions, perActivityMethodOptions);
+    private final PaymentActivity activities = Workflow.newActivityStub(PaymentActivity.class, defaultActivityOptions, perActivityMethodOptions);
 
 
     @Override
@@ -87,7 +87,7 @@ public class SendPaymentWorkflowImpl implements SendPaymentWorkflow {
         try {
             activities.postPayment(instruction);
         } catch (Exception e) {
-            Workflow.getLogger(SendPaymentWorkflowImpl.class).error("Post-payment failed: ", e);
+            Workflow.getLogger(PaymentWorkflowImpl.class).error("Post-payment failed: ", e);
             // Trigger refund sub-workflow
             ChildWorkflowOptions childWorkflowOptions = ChildWorkflowOptions.newBuilder()
                     .setWorkflowId( instruction.getPaymentReference() + "-refund")
@@ -104,7 +104,7 @@ public class SendPaymentWorkflowImpl implements SendPaymentWorkflow {
         // Step 10: Archive Payment
         activities.archivePayment(instruction);
 
-        Workflow.getLogger(SendPaymentWorkflowImpl.class).info("Payment processing workflow completed.");
+        Workflow.getLogger(PaymentWorkflowImpl.class).info("Payment processing workflow completed.");
 
         return PaymentUtil.createPaymentResponse(instruction.getPaymentId(), PaymentResponse.StatusEnum.ACSC);
 

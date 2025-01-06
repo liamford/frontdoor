@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @ActivityImpl(workers = "send-payment-worker")
-public class AccountActivityImpl implements AccountActivity {
+public class PaymentActivityImpl implements PaymentActivity {
 
     @Override
     public PaymentInstruction initiatePayment(PaymentDetails input) {

@@ -1,7 +1,7 @@
 package com.payments.frontdoor.workflows;
 
 import com.payments.frontdoor.PaymentUtil;
-import com.payments.frontdoor.activities.AccountActivity;
+import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
@@ -32,7 +32,7 @@ public class RefundWorkflowImpl implements RefundWorkflow {
 
 
     // ActivityStubs enable calls to methods as if the Activity object is local but actually perform an RPC invocation
-    private final AccountActivity activities = Workflow.newActivityStub(AccountActivity.class, defaultActivityOptions);
+    private final PaymentActivity activities = Workflow.newActivityStub(PaymentActivity.class, defaultActivityOptions);
 
     @Override
     public PaymentResponse processRefund(PaymentInstruction instruction) {

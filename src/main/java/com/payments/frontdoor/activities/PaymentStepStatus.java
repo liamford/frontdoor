@@ -3,7 +3,7 @@ package com.payments.frontdoor.activities;
 import lombok.Getter;
 
 @Getter
-public enum ActivityStepStatus {
+public enum PaymentStepStatus {
     INITIATED("Initiated"),
     MANAGED("Managed"),
     AUTHORIZED("Authorized"),
@@ -18,7 +18,7 @@ public enum ActivityStepStatus {
 
     private final String status;
 
-    ActivityStepStatus(String status) {
+    PaymentStepStatus(String status) {
         this.status = status;
     }
 

@@ -7,7 +7,7 @@ import io.temporal.workflow.WorkflowMethod;
 import model.PaymentDetails;
 
 @WorkflowInterface
-public interface SendPaymentWorkflow {
+public interface PaymentWorkflow {
 
     @WorkflowMethod
     PaymentResponse processPayment(PaymentDetails input);
