@@ -37,7 +37,7 @@ public class RefundWorkflowTest {
 
     @Test
     @WorkflowInitialTime("2020-01-01T01:00:00Z")
-    public void testRefundPayment(
+    void testRefundPayment(
             TestWorkflowEnvironment testEnv,
             WorkflowClient workflowClient,
             WorkflowOptions workflowOptions,

@@ -37,7 +37,7 @@ public class PaymentWorkflowTest {
 
     @Test
     @WorkflowInitialTime("2020-01-01T01:00:00Z")
-    public void testProcessPayment(
+    void testProcessPayment(
             TestWorkflowEnvironment testEnv,
             WorkflowClient workflowClient,
             WorkflowOptions workflowOptions,

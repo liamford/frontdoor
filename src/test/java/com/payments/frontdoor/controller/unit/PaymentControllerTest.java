@@ -52,7 +52,7 @@ public class PaymentControllerTest {
 
     @Test
     @DisplayName("Test for validating missing correlation ID in payment request")
-    public void testPaymentCorrelationIdValidationError() throws Exception {
+    void testPaymentCorrelationIdValidationError() throws Exception {
         mockMvc.perform(performPostRequest())
                 .andExpect(status().isBadRequest())
                 .andExpect(result -> assertInstanceOf(MissingRequestHeaderException.class, result.getResolvedException()));
@@ -60,7 +60,7 @@ public class PaymentControllerTest {
 
     @Test
     @DisplayName("Test for validating missing idempotency Key in payment request")
-    public void testPaymentIdempotencyKeyValidationError() throws Exception {
+    void testPaymentIdempotencyKeyValidationError() throws Exception {
         mockMvc.perform(performPostRequest()
                 .header("x-correlation-id", "123456"))
                 .andExpect(status().isBadRequest())
@@ -69,7 +69,7 @@ public class PaymentControllerTest {
 
     @Test
     @DisplayName("Test for MisMatch idempotency Key in payment request")
-    public void testPaymentIdempotencyKeyMismatchError() throws Exception {
+    void testPaymentIdempotencyKeyMismatchError() throws Exception {
         mockMvc.perform(performPostRequest()
                 .header("x-correlation-id", "123456")
                 .header("x-idempotency-key", "123456"))
@@ -79,7 +79,7 @@ public class PaymentControllerTest {
 
     @Test
     @DisplayName("Test for successful payment request")
-    public void testSuccessfulPaymentRequest() throws Exception {
+    void testSuccessfulPaymentRequest() throws Exception {
         mockMvc.perform(performPostRequest()
                 .header("x-correlation-id", "123456")
                 .header("x-idempotency-key", "INV123456"))
