@@ -1,7 +1,7 @@
 package com.payments.frontdoor.workflows;
 
 
-import com.payments.frontdoor.PaymentUtil;
+import com.payments.frontdoor.util.PaymentUtil;
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import io.temporal.activity.ActivityOptions;

@@ -1,4 +1,4 @@
-package com.payments.frontdoor;
+package com.payments.frontdoor.util;
 
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 

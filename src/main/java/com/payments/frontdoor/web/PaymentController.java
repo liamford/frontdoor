@@ -1,6 +1,6 @@
 package com.payments.frontdoor.web;
 
-import com.payments.frontdoor.PaymentUtil;
+import com.payments.frontdoor.util.PaymentUtil;
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.service.PaymentProcessService;
