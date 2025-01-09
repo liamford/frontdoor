@@ -1,0 +1,72 @@
+{
+  "type": "record",
+  "name": "PaymentInstruction",
+  "namespace": "com.payments.avro",
+  "fields": [
+    {
+      "name": "paymentStatus",
+      "type": "string"
+    },
+    {
+      "name": "paymentId",
+      "type": "string"
+    },
+    {
+      "name": "debtor",
+      "type": {
+        "type": "record",
+        "name": "Account",
+        "fields": [
+          {
+            "name": "accountNumber",
+            "type": "string"
+          },
+          {
+            "name": "accountName",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "creditor",
+      "type": "Account"
+    },
+    {
+      "name": "amount",
+      "type": "double"
+    },
+    {
+      "name": "currency",
+      "type": "string"
+    },
+    {
+      "name": "paymentReference",
+      "type": "string"
+    },
+    {
+      "name": "paymentDate",
+      "type": "string"
+    },
+    {
+      "name": "bankAddress",
+      "type": "string"
+    },
+    {
+      "name": "bankCountry",
+      "type": "string"
+    },
+    {
+      "name": "bankCity",
+      "type": "string"
+    },
+    {
+      "name": "bic",
+      "type": "string"
+    },
+    {
+      "name": "bankName",
+      "type": "string"
+    }
+  ]
+}

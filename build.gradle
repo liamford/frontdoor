@@ -6,6 +6,7 @@ plugins {
 	id 'idea'
 	id 'io.gatling.gradle' version '3.13.1.2'
 	id 'jacoco'
+	id 'com.github.davidmc24.gradle.plugin.avro' version '1.9.1'
 }
 
 group = 'com.payments'
@@ -15,6 +16,11 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
+}
+
+avro {
+	stringType = 'CharSequence'
+	outputCharacterEncoding = 'UTF-8'
 }
 
 configurations {
@@ -30,6 +36,12 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.apache.camel.springboot:camel-spring-boot-starter:4.9.0'
+	implementation 'org.apache.camel:camel-kafka:4.9.0'
+	implementation 'org.apache.camel:camel-core:4.9.0'
+	implementation 'org.springframework.kafka:spring-kafka'
+	implementation 'io.confluent:kafka-avro-serializer:7.8.0'
+	implementation 'org.apache.avro:avro:1.12.0'
 	implementation 'io.springfox:springfox-swagger2:3.0.0'
 	implementation 'com.fasterxml.jackson.core:jackson-core:2.18.2'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
@@ -62,6 +74,12 @@ swaggerSources {
 	}
 }
 
+repositories {
+	mavenCentral()
+	maven {
+		url "https://packages.confluent.io/maven/"
+	}
+}
 
 jacocoTestReport {
 	reports {
@@ -85,6 +103,8 @@ idea {
 
 
 compileJava.dependsOn swaggerSources.payment.code
+compileJava.dependsOn generateAvroJava
+
 sourceSets.main.java.srcDir "${swaggerSources.payment.code.outputDir}/src/main/java"
 
 tasks.named('test') {

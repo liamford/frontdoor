@@ -1,1 +1,11 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        maven {
+            url 'https://packages.confluent.io/maven/'
+        }
+        gradlePluginPortal()
+    }
+}
+
 rootProject.name = 'frontdoor'
