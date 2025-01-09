@@ -15,7 +15,7 @@ public class PaymentSimulation extends Simulation {
 
     public PaymentSimulation() {
         httpProtocol = http
-                .baseUrl("http://localhost:8081") // Base URL for the application
+                .baseUrl("http://localhost:8080") // Base URL for the application
                 .acceptHeader("application/json")
                 .contentTypeHeader("application/json");
 

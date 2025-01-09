@@ -2,3 +2,8 @@ server:
   port: 8080
   error:
     include-stacktrace: on_param
+spring:
+  temporal:
+    namespace: default
+    connection:
+        target: temporaltest-frontend:7233

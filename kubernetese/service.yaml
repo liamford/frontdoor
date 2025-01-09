@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontdoor-service
+  namespace: default
+spec:
+  ports:
+    - nodePort: 30970
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: frontdoor
+  sessionAffinity: None
+  type: LoadBalancer
