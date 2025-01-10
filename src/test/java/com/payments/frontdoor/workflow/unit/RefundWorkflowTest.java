@@ -1,7 +1,7 @@
 package com.payments.frontdoor.workflow.unit;
 
 import com.payments.frontdoor.activities.PaymentActivityImpl;
-import com.payments.frontdoor.service.PaymentDispacherService;
+import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.swagger.model.Account;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import com.payments.frontdoor.workflows.RefundWorkflow;
@@ -30,15 +30,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 @RunWith(MockitoJUnitRunner.class)
-public class RefundWorkflowTest {
+class RefundWorkflowTest {
 
-    PaymentDispacherService paymentDispacherService = Mockito.mock(PaymentDispacherService.class);
+    PaymentDispatcherService paymentDispatcherService = Mockito.mock(PaymentDispatcherService.class);
 
     @RegisterExtension
     public  final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
                     .setWorkflowTypes(RefundWorkflowImpl.class)
-                   .setActivityImplementations(new PaymentActivityImpl(paymentDispacherService))
+                   .setActivityImplementations(new PaymentActivityImpl(paymentDispatcherService))
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();
 

@@ -6,7 +6,7 @@ spring:
       auto.register.schemas: true
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
       properties:
         acks: all
         retries: 10
@@ -43,5 +43,15 @@ server:
 
 payments:
   kafka:
-    executionTopic: payments.execution.v1
+    topics:
+      managed: payments.managed.v1
+      authorized: payments.authorized.v1
+      executed: payments.executed.v1
+      cleared: payments.cleared.v1
+      notified: payments.notified.v1
+      reconciled: payments.reconciled.v1
+      posted: payments.posted.v1
+      refund: payments.refund.v1
+      reported: payments.reported.v1
+      archived: payments.archived.v1
 

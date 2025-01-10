@@ -1,6 +1,6 @@
 package com.payments.frontdoor.config;
 
-
+import com.payments.avro.PaymentRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +17,7 @@ import java.util.Map;
 public class KafkaProducerConfig {
 
     @Bean
-    public KafkaTemplate<String, String> kafkaTemplate(KafkaProperties kafkaProperties) {
+    public KafkaTemplate<String, PaymentRecord> kafkaTemplate(KafkaProperties kafkaProperties) {
         Map<String, Object> kafkaPropertiesMap = kafkaProperties.buildProducerProperties(null);
         return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(kafkaPropertiesMap));
     }

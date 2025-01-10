@@ -1,7 +1,6 @@
 package com.payments.frontdoor.service;
 
-
-import com.payments.frontdoor.config.KafkaCustomProperties;
+import com.payments.avro.PaymentRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -16,21 +15,18 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class KafkaProducer {
 
-    private final KafkaCustomProperties kafkaCustomProperties;
+    private final KafkaTemplate<String, PaymentRecord> kafkaTemplate;
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
-
-
-    public void sendMessage(String message) {
-        ProducerRecord<String, String> producerRecord = new ProducerRecord<>(kafkaCustomProperties.getExecutionTopic(), message, message);
-        CompletableFuture<SendResult<String, String>> completableFuture = kafkaTemplate.send(producerRecord);
-        log.info("Sending kafka message on topic {}", kafkaCustomProperties.getExecutionTopic());
+    public void sendMessage(String topic, String key, PaymentRecord message) {
+        ProducerRecord<String, PaymentRecord> producerRecord = new ProducerRecord<>(topic, key, message);
+        CompletableFuture<SendResult<String, PaymentRecord>> completableFuture = kafkaTemplate.send(producerRecord);
+        log.info("Sending kafka message on topic {}", topic);
 
         completableFuture.whenComplete((result, ex) -> {
             if (ex == null) {
-                log.info("Kafka message successfully sent on topic {} and value {}", kafkaCustomProperties.getExecutionTopic(), result.getProducerRecord().value().toString());
+                log.info("Kafka message successfully sent on topic {} and Key {}", topic, result.getProducerRecord().key());
             } else {
-                log.error("An error occurred while sending kafka message for event with value {}", producerRecord);
+                log.error("An error occurred while sending kafka message for event with key {}", key);
             }
         });
     }

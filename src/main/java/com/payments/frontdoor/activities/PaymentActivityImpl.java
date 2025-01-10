@@ -1,13 +1,11 @@
 package com.payments.frontdoor.activities;
 
-import com.payments.frontdoor.service.KafkaProducer;
-import com.payments.frontdoor.service.PaymentDispacherService;
+import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.swagger.model.PaymentResponse.StatusEnum;
 import io.temporal.spring.boot.ActivityImpl;
 import lombok.extern.slf4j.Slf4j;
 import model.PaymentDetails;
 import model.PaymentInstruction;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -16,9 +14,9 @@ import org.springframework.stereotype.Component;
 public class PaymentActivityImpl implements PaymentActivity {
 
 
-    private final PaymentDispacherService dispacherService;
+    private final PaymentDispatcherService dispacherService;
 
-    public PaymentActivityImpl(PaymentDispacherService dispacherService) {
+    public PaymentActivityImpl(PaymentDispatcherService dispacherService) {
         this.dispacherService = dispacherService;
     }
 
@@ -44,25 +42,29 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public StatusEnum executePayment(PaymentInstruction instruction) {
         log.info("Executing payment: {}", instruction);
-        dispacherService.dispatchPayment(instruction.getPaymentId());
+        dispacherService.dispatchPayment(instruction, PaymentStepStatus.EXECUTED);
         return StatusEnum.ACSP;
     }
 
     @Override
     public StatusEnum clearAndSettlePayment(PaymentInstruction instruction) {
         log.info("Clearing and settling payment: {}", instruction);
+        dispacherService.dispatchPayment(instruction, PaymentStepStatus.CLEARED);
+
         return StatusEnum.ACSC;
     }
 
     @Override
     public StatusEnum sendNotification(PaymentInstruction instruction) {
         log.info("Sending notification for payment: {}", instruction);
+        dispacherService.dispatchPayment(instruction, PaymentStepStatus.NOTIFIED);
         return StatusEnum.ACSP;
     }
 
     @Override
     public StatusEnum reconcilePayment(PaymentInstruction instruction) {
         log.info("Reconciling payment: {}", instruction);
+        dispacherService.dispatchPayment(instruction, PaymentStepStatus.RECONCILED);
         return StatusEnum.ACSP;
     }
 
@@ -72,24 +74,32 @@ public class PaymentActivityImpl implements PaymentActivity {
         if (instruction.getDebtor().equals(instruction.getCreditor())) {
             throw new IllegalArgumentException("Debtor and creditor accounts are same");
         }
+        dispacherService.dispatchPayment(instruction, PaymentStepStatus.POSTED);
+
         return StatusEnum.ACSP;
     }
 
     @Override
     public StatusEnum generateReports(PaymentInstruction instruction) {
         log.info("Generating reports for payment: {}", instruction);
+        dispacherService.dispatchPayment(instruction, PaymentStepStatus.REPORTED);
+
         return StatusEnum.ACSP;
     }
 
     @Override
     public StatusEnum archivePayment(PaymentInstruction instruction) {
         log.info("Archiving payment: {}", instruction);
+        dispacherService.dispatchPayment(instruction, PaymentStepStatus.ARCHIVED);
+
         return StatusEnum.ACSP;
     }
 
     @Override
     public StatusEnum refundPayment(PaymentInstruction instruction) {
         log.info("Refunding payment: {}", instruction);
+        dispacherService.dispatchPayment(instruction, PaymentStepStatus.REFUND);
+
         return StatusEnum.RJCT;
     }
 
