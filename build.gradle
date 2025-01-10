@@ -136,5 +136,17 @@ configurations.configureEach {
 			details.useVersion '1.5.15'
 			details.because("CVE-2024-12798")
 		}
+
+		if (details.requested.group == 'com.google.protobuf' && details.requested.name == 'protobuf-java') {
+			details.useVersion '3.25.5'
+			details.because("CVE-2024-7254")
+		}
+
+		if (details.requested.group == 'com.google.protobuf' && details.requested.name == 'protobuf-java-util') {
+			details.useVersion '3.25.5'
+			details.because("CVE-2024-7254 ")
+		}
+
+
 	}
 }
