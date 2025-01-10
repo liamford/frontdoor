@@ -1,6 +1,7 @@
 package com.payments.frontdoor.workflow.unit;
 
 import com.payments.frontdoor.activities.PaymentActivityImpl;
+import com.payments.frontdoor.service.PaymentDispacherService;
 import com.payments.frontdoor.swagger.model.Account;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
@@ -15,6 +16,9 @@ import model.PaymentDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,13 +29,16 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
+@RunWith(MockitoJUnitRunner.class)
 public class PaymentWorkflowTest {
 
+    PaymentDispacherService paymentDispacherService = Mockito.mock(PaymentDispacherService.class);
+
     @RegisterExtension
-    public static final TestWorkflowExtension testWorkflow =
+    public  final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
                     .setWorkflowTypes(PaymentWorkflowImpl.class)
-                    .setActivityImplementations(new PaymentActivityImpl())
+                   .setActivityImplementations(new PaymentActivityImpl(paymentDispacherService))
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();
 

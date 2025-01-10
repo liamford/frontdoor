@@ -2,25 +2,44 @@ package com.payments.frontdoor.activity.unit;
 
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.activities.PaymentActivityImpl;
+import com.payments.frontdoor.service.PaymentDispacherService;
 import com.payments.frontdoor.swagger.model.Account;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import io.temporal.testing.TestActivityExtension;
 import model.PaymentDetails;
 import model.PaymentInstruction;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.MockitoRule;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 
-public class PaymentActivityTest {
+@RunWith(MockitoJUnitRunner.class)
+ class PaymentActivityTest {
+
+    PaymentDispacherService paymentDispacherService = Mockito.mock(PaymentDispacherService.class);
+
+
+
+    @Rule
+    public MockitoRule rule = MockitoJUnit.rule();
 
     @RegisterExtension
-    public static final TestActivityExtension activityExtension =
+    public  final TestActivityExtension activityExtension =
             TestActivityExtension.newBuilder()
-                    .setActivityImplementations(new PaymentActivityImpl())
+                    .setActivityImplementations(new PaymentActivityImpl(paymentDispacherService))
                     .build();
 
     private PaymentInstruction createPaymentInstruction() {
@@ -42,8 +61,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testInitiatePayment(PaymentActivity activity) {
-
+    void testInitiatePayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentDetails paymentDetails = PaymentDetails.builder()
                 .paymentId("12345")
                 .amount(new BigDecimal("100.00"))
@@ -59,7 +78,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testManagePaymentOrder(PaymentActivity activity) {
+    void testManagePaymentOrder() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         boolean response = activity.managePaymentOrder(paymentInstruction);
@@ -68,7 +88,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testAuthorizePayment(PaymentActivity activity) {
+    void testAuthorizePayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         boolean response = activity.authorizePayment(paymentInstruction);
@@ -77,9 +98,11 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testExecutePayment(PaymentActivity activity) {
+    void testExecutePayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
-
+        PaymentDispacherService paymentDispacherService1 = Mockito.mock(PaymentDispacherService.class);
+        doNothing().when(paymentDispacherService1).dispatchPayment(anyString());
         PaymentResponse.StatusEnum response = activity.executePayment(paymentInstruction);
 
         assertNotNull(response);
@@ -87,7 +110,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testClearAndSettlePayment(PaymentActivity activity) {
+    void testClearAndSettlePayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentResponse.StatusEnum response = activity.clearAndSettlePayment(paymentInstruction);
@@ -97,7 +121,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testSendNotification(PaymentActivity activity) {
+    void testSendNotification() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentResponse.StatusEnum response = activity.sendNotification(paymentInstruction);
@@ -107,7 +132,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testReconcilePayment(PaymentActivity activity) {
+    void testReconcilePayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentResponse.StatusEnum response = activity.reconcilePayment(paymentInstruction);
@@ -117,7 +143,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testPostPayment(PaymentActivity activity) {
+    void testPostPayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentResponse.StatusEnum response = activity.postPayment(paymentInstruction);
@@ -127,7 +154,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testGenerateReports(PaymentActivity activity) {
+    void testGenerateReports() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentResponse.StatusEnum response = activity.generateReports(paymentInstruction);
@@ -137,7 +165,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testArchivePayment(PaymentActivity activity) {
+    void testArchivePayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentResponse.StatusEnum response = activity.archivePayment(paymentInstruction);
@@ -147,7 +176,8 @@ public class PaymentActivityTest {
     }
 
     @Test
-    void testRefundPayment(PaymentActivity activity) {
+    void testRefundPayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentDispacherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentResponse.StatusEnum response = activity.refundPayment(paymentInstruction);

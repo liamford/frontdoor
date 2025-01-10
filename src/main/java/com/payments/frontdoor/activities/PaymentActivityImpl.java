@@ -1,16 +1,27 @@
 package com.payments.frontdoor.activities;
 
+import com.payments.frontdoor.service.KafkaProducer;
+import com.payments.frontdoor.service.PaymentDispacherService;
 import com.payments.frontdoor.swagger.model.PaymentResponse.StatusEnum;
 import io.temporal.spring.boot.ActivityImpl;
 import lombok.extern.slf4j.Slf4j;
 import model.PaymentDetails;
 import model.PaymentInstruction;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @ActivityImpl(workers = "send-payment-worker")
 public class PaymentActivityImpl implements PaymentActivity {
+
+
+    private final PaymentDispacherService dispacherService;
+
+    public PaymentActivityImpl(PaymentDispacherService dispacherService) {
+        this.dispacherService = dispacherService;
+    }
+
 
     @Override
     public PaymentInstruction initiatePayment(PaymentDetails input) {
@@ -33,6 +44,7 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public StatusEnum executePayment(PaymentInstruction instruction) {
         log.info("Executing payment: {}", instruction);
+        dispacherService.dispatchPayment(instruction.getPaymentId());
         return StatusEnum.ACSP;
     }
 

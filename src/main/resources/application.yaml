@@ -3,9 +3,22 @@ spring:
     bootstrap-servers: localhost:9092
     properties:
       schema.registry.url: http://localhost:8081
+      auto.register.schemas: true
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        acks: all
+        retries: 10
+        batch-size: 16384
+        linger-ms: 1
+        buffer-memory: 33554432
+        auto.create.topics.enable: true
+        auto.register.schemas: true
+      security:
+        protocol: PLAINTEXT
+    security:
+      protocol: PLAINTEXT
   application:
     name: frontdoor
   temporal:
@@ -27,3 +40,8 @@ server:
     include-stacktrace: on_param
   servlet:
     context-path: /api/payments/v1
+
+payments:
+  kafka:
+    executionTopic: payments.execution.v1
+
