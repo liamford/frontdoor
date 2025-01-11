@@ -1,5 +1,6 @@
 package com.payments.frontdoor.web;
 
+import com.google.protobuf.Timestamp;
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.service.PaymentProcessService;
@@ -18,6 +19,9 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -72,7 +76,8 @@ public class PaymentController {
     private PaymentStatusResponse convertToPaymentStatusResponse(WorkflowResult workflowResult, String paymentId) {
         PaymentStatusResponse response = new PaymentStatusResponse();
         response.setPaymentId(paymentId);
-
+        response.setStartTime(PaymentUtil.convertToOffsetDateTime(workflowResult.getStartTime()));
+        response.setEndTime(PaymentUtil.convertToOffsetDateTime(workflowResult.getEndTime()));
         switch (workflowResult.getWorkflowStatus()) {
             case WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED:
                 response.setStatus(PaymentStatusResponse.StatusEnum.ACSC);
@@ -91,6 +96,7 @@ public class PaymentController {
                         Activities activityResponse = new Activities();
                         activityResponse.setActivityName(activity.getActivityName());
                         activityResponse.setStatus(activity.getStatus());
+                        activityResponse.setStartTime(PaymentUtil.convertToOffsetDateTime(activity.getStartTime()));
                         return activityResponse;
                     })
                     .collect(Collectors.toList()));
