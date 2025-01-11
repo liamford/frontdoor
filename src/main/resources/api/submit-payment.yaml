@@ -56,6 +56,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/payments/v1/payment-status/{paymentId}:
+    get:
+      summary: Get payment status
+      description: Returns the payment status and optionally includes activities.
+      operationId: getPaymentStatus
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        description: Correlation ID for the request
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: paymentId
+        in: path
+        description: ID of the payment
+        required: true
+        schema:
+          type: string
+      - name: includeActivities
+        in: query
+        description: Flag to include activities in the response
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: Payment status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentStatusResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     PaymentRequest:
@@ -116,6 +162,47 @@ components:
           - ACSP
           - ACSC
           - RJCT
+    PaymentStatusResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          description: Unique identifier for the payment
+          example: "987654321"
+        startTime:
+          type: string
+          format: date-time
+          description: Time of the event
+        endTime:
+          type: string
+          format: date-time
+          description: Time of the event
+        status:
+          type: string
+          description: ISO payment status
+          example: ACTC
+          enum:
+          - ACTC
+          - ACSP
+          - ACSC
+          - RJCT
+        activities:
+          type: array
+          items:
+            $ref: '#/components/schemas/activities'
+    activities:
+      type: object
+      properties:
+        activityName:
+          type: string
+          description: Name of the activity
+        status:
+          type: string
+          description: Result of the activity
+        startTime:
+          type: string
+          format: date-time
+          description: Time of the event
     ErrorResponse:
       type: object
       properties:

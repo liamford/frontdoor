@@ -1,23 +1,25 @@
 package com.payments.frontdoor.web;
 
-import com.payments.frontdoor.util.PaymentUtil;
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.service.PaymentProcessService;
+import com.payments.frontdoor.swagger.model.Activities;
 import com.payments.frontdoor.swagger.model.PaymentRequest;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
+import com.payments.frontdoor.swagger.model.PaymentStatusResponse;
+import com.payments.frontdoor.util.PaymentUtil;
+import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import lombok.extern.slf4j.Slf4j;
 import model.PaymentDetails;
+import model.WorkflowResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -44,13 +46,57 @@ public class PaymentController {
 
         PaymentDetails paymentDetails = getPaymentDetails(request, uetr);
 
-        String workflowId = request.getPaymentReference();
-        paymentProcessService.processPaymentAsync(paymentDetails, workflowId);
+        paymentProcessService.processPaymentAsync(paymentDetails, uetr);
 
         PaymentResponse response = PaymentUtil.createPaymentResponse(uetr, PaymentResponse.StatusEnum.ACTC);
 
         log.info("Payment Created with paymentId: {}", response.getPaymentId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping(value = "/payment-status/{paymentId}", produces = "application/json")
+    public ResponseEntity<PaymentStatusResponse> getPaymentStatus(
+            @RequestHeader(name = "x-correlation-id") String correlationId,
+            @PathVariable String paymentId,
+            @RequestParam(name = "includeActivities", required = false, defaultValue = "false") boolean includeActivities) {
+
+        log.info("Received request to get payment status for paymentId: {} - correlationId: {}", paymentId, correlationId);
+
+        WorkflowResult workflowResult = paymentProcessService.retrieveWorkFlowHistory(paymentId, includeActivities);
+        PaymentStatusResponse response = convertToPaymentStatusResponse(workflowResult, paymentId);
+        response.setPaymentId(paymentId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    private PaymentStatusResponse convertToPaymentStatusResponse(WorkflowResult workflowResult, String paymentId) {
+        PaymentStatusResponse response = new PaymentStatusResponse();
+        response.setPaymentId(paymentId);
+
+        switch (workflowResult.getWorkflowStatus()) {
+            case WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED:
+                response.setStatus(PaymentStatusResponse.StatusEnum.ACSC);
+                break;
+            case WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED:
+                response.setStatus(PaymentStatusResponse.StatusEnum.RJCT);
+                break;
+            default:
+                response.setStatus(PaymentStatusResponse.StatusEnum.ACTC);
+                break;
+        }
+
+        if (workflowResult.getActivities() != null) {
+            response.setActivities(workflowResult.getActivities().stream()
+                    .map(activity -> {
+                        Activities activityResponse = new Activities();
+                        activityResponse.setActivityName(activity.getActivityName());
+                        activityResponse.setStatus(activity.getStatus());
+                        return activityResponse;
+                    })
+                    .collect(Collectors.toList()));
+        }
+
+        return response;
     }
 
     private PaymentDetails getPaymentDetails(PaymentRequest request, String uetr) {

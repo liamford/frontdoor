@@ -84,13 +84,3 @@ services:
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
       CONNECT_PLUGIN_PATH: /usr/share/java
-
-  kafka-manager:
-    image: hlebalbau/kafka-manager:latest
-    hostname: kafka-manager
-    container_name: kafka-manager
-    ports:
-      - 9000:9000
-    environment:
-      ZK_HOSTS: zookeeper:2181
-      APPLICATION_SECRET: random-secret
