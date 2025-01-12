@@ -3,8 +3,8 @@ package com.payments.frontdoor.activities;
 import com.payments.frontdoor.swagger.model.PaymentResponse.StatusEnum;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
-import model.PaymentDetails;
-import model.PaymentInstruction;
+import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.model.PaymentInstruction;
 
 @ActivityInterface
 public interface PaymentActivity {

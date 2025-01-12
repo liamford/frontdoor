@@ -7,7 +7,7 @@ import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
-import model.PaymentInstruction;
+import com.payments.frontdoor.model.PaymentInstruction;
 
 import java.time.Duration;
 

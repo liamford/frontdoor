@@ -5,7 +5,7 @@ import com.payments.avro.PaymentRecord;
 import com.payments.frontdoor.activities.PaymentStepStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import model.PaymentInstruction;
+import com.payments.frontdoor.model.PaymentInstruction;
 import org.springframework.stereotype.Service;
 
 @Slf4j

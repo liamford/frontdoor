@@ -12,7 +12,7 @@ import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.testing.TestWorkflowExtension;
 import io.temporal.testing.WorkflowInitialTime;
 import io.temporal.worker.Worker;
-import model.PaymentDetails;
+import com.payments.frontdoor.model.PaymentDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;

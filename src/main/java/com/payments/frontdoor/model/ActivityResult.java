@@ -1,4 +1,4 @@
-package model;
+package com.payments.frontdoor.model;
 
 
 import com.google.protobuf.Timestamp;

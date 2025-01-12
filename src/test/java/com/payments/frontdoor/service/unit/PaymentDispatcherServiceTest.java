@@ -7,7 +7,7 @@ import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.service.KafkaProducer;
 import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.service.PaymentTopicService;
-import model.PaymentInstruction;
+import com.payments.frontdoor.model.PaymentInstruction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

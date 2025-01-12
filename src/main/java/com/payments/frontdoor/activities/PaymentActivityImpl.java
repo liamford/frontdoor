@@ -4,8 +4,8 @@ import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.swagger.model.PaymentResponse.StatusEnum;
 import io.temporal.spring.boot.ActivityImpl;
 import lombok.extern.slf4j.Slf4j;
-import model.PaymentDetails;
-import model.PaymentInstruction;
+import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.model.PaymentInstruction;
 import org.springframework.stereotype.Component;
 
 @Slf4j

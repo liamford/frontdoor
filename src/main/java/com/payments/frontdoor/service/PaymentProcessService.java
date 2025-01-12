@@ -16,9 +16,9 @@ import io.temporal.api.workflowservice.v1.GetWorkflowExecutionHistoryResponse;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import lombok.AllArgsConstructor;
-import model.ActivityResult;
-import model.PaymentDetails;
-import model.WorkflowResult;
+import com.payments.frontdoor.model.ActivityResult;
+import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.model.WorkflowResult;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 

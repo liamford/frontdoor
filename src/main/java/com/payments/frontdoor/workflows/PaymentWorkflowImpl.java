@@ -12,8 +12,8 @@ import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Promise;
 import io.temporal.workflow.Workflow;
 import lombok.extern.slf4j.Slf4j;
-import model.PaymentDetails;
-import model.PaymentInstruction;
+import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.model.PaymentInstruction;
 
 import java.time.Duration;
 import java.util.HashMap;
