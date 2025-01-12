@@ -14,10 +14,11 @@ import org.springframework.stereotype.Component;
 public class PaymentActivityImpl implements PaymentActivity {
 
 
-    private final PaymentDispatcherService dispacherService;
 
-    public PaymentActivityImpl(PaymentDispatcherService dispacherService) {
-        this.dispacherService = dispacherService;
+    private final PaymentDispatcherService dispatcherService;
+
+    public PaymentActivityImpl(PaymentDispatcherService dispatcherService) {
+        this.dispatcherService = dispatcherService;
     }
 
 
@@ -42,14 +43,14 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public StatusEnum executePayment(PaymentInstruction instruction) {
         log.info("Executing payment: {}", instruction);
-        dispacherService.dispatchPayment(instruction, PaymentStepStatus.EXECUTED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.EXECUTED);
         return StatusEnum.ACSP;
     }
 
     @Override
     public StatusEnum clearAndSettlePayment(PaymentInstruction instruction) {
         log.info("Clearing and settling payment: {}", instruction);
-        dispacherService.dispatchPayment(instruction, PaymentStepStatus.CLEARED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.CLEARED);
 
         return StatusEnum.ACSC;
     }
@@ -57,14 +58,14 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public StatusEnum sendNotification(PaymentInstruction instruction) {
         log.info("Sending notification for payment: {}", instruction);
-        dispacherService.dispatchPayment(instruction, PaymentStepStatus.NOTIFIED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.NOTIFIED);
         return StatusEnum.ACSP;
     }
 
     @Override
     public StatusEnum reconcilePayment(PaymentInstruction instruction) {
         log.info("Reconciling payment: {}", instruction);
-        dispacherService.dispatchPayment(instruction, PaymentStepStatus.RECONCILED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.RECONCILED);
         return StatusEnum.ACSP;
     }
 
@@ -74,7 +75,7 @@ public class PaymentActivityImpl implements PaymentActivity {
         if (instruction.getDebtor().equals(instruction.getCreditor())) {
             throw new IllegalArgumentException("Debtor and creditor accounts are same");
         }
-        dispacherService.dispatchPayment(instruction, PaymentStepStatus.POSTED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.POSTED);
 
         return StatusEnum.ACSP;
     }
@@ -82,7 +83,7 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public StatusEnum generateReports(PaymentInstruction instruction) {
         log.info("Generating reports for payment: {}", instruction);
-        dispacherService.dispatchPayment(instruction, PaymentStepStatus.REPORTED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REPORTED);
 
         return StatusEnum.ACSP;
     }
@@ -90,7 +91,7 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public StatusEnum archivePayment(PaymentInstruction instruction) {
         log.info("Archiving payment: {}", instruction);
-        dispacherService.dispatchPayment(instruction, PaymentStepStatus.ARCHIVED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.ARCHIVED);
 
         return StatusEnum.ACSP;
     }
@@ -98,7 +99,7 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public StatusEnum refundPayment(PaymentInstruction instruction) {
         log.info("Refunding payment: {}", instruction);
-        dispacherService.dispatchPayment(instruction, PaymentStepStatus.REFUND);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REFUND);
 
         return StatusEnum.RJCT;
     }

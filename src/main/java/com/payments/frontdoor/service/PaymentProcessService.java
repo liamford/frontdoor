@@ -19,6 +19,7 @@ import lombok.AllArgsConstructor;
 import com.payments.frontdoor.model.ActivityResult;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.WorkflowResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class PaymentProcessService {
 
     private final WorkflowClient workflowClient;
