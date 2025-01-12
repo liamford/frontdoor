@@ -17,7 +17,7 @@ public class KafkaProducer {
 
     private final KafkaTemplate<String, PaymentRecord> kafkaTemplate;
 
-    public void sendMessage(String topic, String key, PaymentRecord message) {
+    public CompletableFuture<SendResult<String, PaymentRecord>> sendMessage(String topic, String key, PaymentRecord message) {
         ProducerRecord<String, PaymentRecord> producerRecord = new ProducerRecord<>(topic, key, message);
         CompletableFuture<SendResult<String, PaymentRecord>> completableFuture = kafkaTemplate.send(producerRecord);
         log.info("Sending kafka message on topic {}", topic);
@@ -29,5 +29,6 @@ public class KafkaProducer {
                 log.error("An error occurred while sending kafka message for event with key {}", key);
             }
         });
+        return completableFuture;
     }
 }
