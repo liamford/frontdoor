@@ -32,6 +32,7 @@ class KafkaProducerTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void sendMessage_WhenSuccessful_ShouldReturnCompletedFuture() {
         // Arrange
         String topic = "test-topic";
@@ -53,6 +54,7 @@ class KafkaProducerTest {
 
 
     @Test
+    @SuppressWarnings("unchecked")
     void sendMessage_WhenFailure_ShouldHandleException() {
         // Arrange
         String topic = "test-topic";
@@ -91,6 +93,7 @@ class KafkaProducerTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void sendMessage_ShouldCompleteWithCallback() {
         // Arrange
         String topic = "test-topic";
