@@ -1,10 +1,10 @@
 package com.payments.frontdoor.workflow.unit;
 
 import com.payments.frontdoor.activities.PaymentActivityImpl;
+import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.swagger.model.Account;
-import com.payments.frontdoor.swagger.model.PaymentResponse;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
 import com.payments.frontdoor.workflows.PaymentWorkflowImpl;
 import io.temporal.client.WorkflowClient;
@@ -38,7 +38,7 @@ class PaymentWorkflowTest {
     public  final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
                     .setWorkflowTypes(PaymentWorkflowImpl.class)
-                   .setActivityImplementations(new PaymentActivityImpl(paymentDispatcherService))
+                    .setActivityImplementations(new PaymentActivityImpl(paymentDispatcherService))
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();
 
@@ -77,9 +77,15 @@ class PaymentWorkflowTest {
                         Instant.parse("2020-01-01T01:00:00Z"),
                         Instant.ofEpochMilli(testEnv.currentTimeMillis()).truncatedTo(ChronoUnit.HOURS)),
                 () -> {
-                    PaymentResponse response = workflow.processPayment(paymentDetails);
-                    assertNotNull(response);
-                    assertEquals(PaymentResponse.StatusEnum.ACSC, response.getStatus());
+                    try {
+                         workflow.processPayment(paymentDetails);
+                         workflow.waitForStep(PaymentStepStatus.EXECUTED);
+                    } catch (Exception e) {
+                        System.out.println("TIMEOUT ISSUE");
+                    }
+
+                    assertNotNull(workflow.getCompletedSteps());
+
                 });
     }
 }

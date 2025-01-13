@@ -121,4 +121,9 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
     public void waitForStep(PaymentStepStatus paymentStepStatus) {
        steps.add(paymentStepStatus);
     }
+
+    @Override
+    public Set<PaymentStepStatus> getCompletedSteps() {
+        return steps;
+    }
 }
