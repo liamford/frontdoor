@@ -1,9 +1,27 @@
 spring:
   kafka:
     bootstrap-servers: localhost:9092
+    listener:
+      ack-mode: manual
     properties:
       schema.registry.url: http://localhost:8081
       auto.register.schemas: true
+    consumer:
+      client-id: frontdoor
+      group-id: frontdoor
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      properties:
+        specific.avro.reader: true
+        auto.offset.reset: earliest
+        enable.auto.commit: false
+        isolation.level: read_committed
+        session.timeout.ms: 30000
+        heartbeat.interval.ms: 10000
+        max.poll.records: 500
+        max.poll.interval.ms: 300000
+      security:
+        protocol: PLAINTEXT
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer

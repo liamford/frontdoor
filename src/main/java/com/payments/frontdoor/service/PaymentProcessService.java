@@ -1,6 +1,7 @@
 package com.payments.frontdoor.service;
 
 import com.google.protobuf.Timestamp;
+import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.config.TemporalWorkflowConfig;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
 import io.temporal.api.common.v1.WorkflowExecution;
@@ -40,6 +41,11 @@ public class PaymentProcessService {
     public void processPaymentAsync(PaymentDetails paymentDetails, String workflowId) {
         PaymentWorkflow workflow = temporalWorkflowConfig.sendPaymentWorkflowWithId(workflowClient, workflowId);
         WorkflowClient.start(workflow::processPayment, paymentDetails);
+    }
+
+    public void sendSignal(PaymentStepStatus status, String workflowId){
+        PaymentWorkflow workflow = workflowClient.newWorkflowStub(PaymentWorkflow.class, workflowId);
+        workflow.waitForStep(status);
     }
 
     public WorkflowResult retrieveWorkFlowHistory(String workflowId, boolean includeActivities) {

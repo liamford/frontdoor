@@ -1,6 +1,7 @@
 package com.payments.frontdoor.workflow.unit;
 
 import com.payments.frontdoor.activities.PaymentActivityImpl;
+import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.swagger.model.Account;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
@@ -12,7 +13,6 @@ import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.testing.TestWorkflowExtension;
 import io.temporal.testing.WorkflowInitialTime;
 import io.temporal.worker.Worker;
-import com.payments.frontdoor.model.PaymentDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;

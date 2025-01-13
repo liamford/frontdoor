@@ -1,6 +1,7 @@
 package com.payments.frontdoor.workflows;
 
 
+import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.util.PaymentUtil;
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
@@ -11,18 +12,21 @@ import io.temporal.workflow.Async;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Promise;
 import io.temporal.workflow.Workflow;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @WorkflowImpl(workers = "send-payment-worker")
 @Slf4j
+@NoArgsConstructor
 public class PaymentWorkflowImpl implements PaymentWorkflow {
     private static final String INITIATE = "initiatePayment";
+    private Set<PaymentStepStatus> steps;
+
 
     // RetryOptions specify how to automatically handle retries when Activities fail
     private final RetryOptions retryoptions = RetryOptions.newBuilder()
@@ -56,11 +60,10 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
 
     @Override
     public PaymentResponse processPayment(PaymentDetails paymentDetails) {
-
+        steps = new LinkedHashSet<>();
         PaymentInstruction instruction = activities.initiatePayment(paymentDetails);
-
+        steps.add(PaymentStepStatus.INITIATED);
         // Step 2 & 3: Run Payment Order Management and Payment Authorization in Parallel
-
 
         Promise<Boolean> isOrderValidPromise = Async.function(activities::managePaymentOrder, instruction);
         Promise<Boolean> isAuthorizedPromise = Async.function(activities::authorizePayment, instruction);
@@ -74,18 +77,22 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
 
         // Step 4: Execute Payment
         activities.executePayment(instruction);
+        Workflow.await(() -> this.steps.contains(PaymentStepStatus.EXECUTED));
 
         // Steps 5, 6, & 7: Run Clearing, Notification, and Reconciliation in Parallel
-        Promise<PaymentResponse.StatusEnum> clearAndSettlePromise = Async.function(activities::clearAndSettlePayment, instruction);
-        Promise<PaymentResponse.StatusEnum> sendNotificationPromise = Async.function(activities::sendNotification, instruction);
-        Promise<PaymentResponse.StatusEnum> reconcilePromise = Async.function(activities::reconcilePayment, instruction);
+        Promise<PaymentStepStatus> clearAndSettlePromise = Async.function(activities::clearAndSettlePayment, instruction);
+        Promise<PaymentStepStatus> sendNotificationPromise = Async.function(activities::sendNotification, instruction);
+        Promise<PaymentStepStatus> reconcilePromise = Async.function(activities::reconcilePayment, instruction);
 
         Promise.allOf(clearAndSettlePromise, sendNotificationPromise, reconcilePromise).get();
-
+        steps.add(clearAndSettlePromise.get());
+        steps.add(sendNotificationPromise.get());
+        steps.add(reconcilePromise.get());
 
         // Step 8: Post Payment
         try {
-            activities.postPayment(instruction);
+            steps.add(activities.postPayment(instruction));
+
         } catch (Exception e) {
             Workflow.getLogger(PaymentWorkflowImpl.class).error("Post-payment failed: ", e);
             // Trigger refund sub-workflow
@@ -99,10 +106,10 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         }
 
         // Step 9: Generate Reports
-        activities.generateReports(instruction);
+        steps.add(activities.generateReports(instruction));
 
         // Step 10: Archive Payment
-        activities.archivePayment(instruction);
+        steps.add(activities.archivePayment(instruction));
 
         Workflow.getLogger(PaymentWorkflowImpl.class).info("Payment processing workflow completed.");
 
@@ -110,4 +117,8 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
 
     }
 
+    @Override
+    public void waitForStep(PaymentStepStatus paymentStepStatus) {
+       steps.add(paymentStepStatus);
+    }
 }

@@ -2,6 +2,8 @@ package com.payments.frontdoor.web;
 
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
+import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.model.WorkflowResult;
 import com.payments.frontdoor.service.PaymentProcessService;
 import com.payments.frontdoor.swagger.model.Activities;
 import com.payments.frontdoor.swagger.model.PaymentRequest;
@@ -10,8 +12,6 @@ import com.payments.frontdoor.swagger.model.PaymentStatusResponse;
 import com.payments.frontdoor.util.PaymentUtil;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import lombok.extern.slf4j.Slf4j;
-import com.payments.frontdoor.model.PaymentDetails;
-import com.payments.frontdoor.model.WorkflowResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;

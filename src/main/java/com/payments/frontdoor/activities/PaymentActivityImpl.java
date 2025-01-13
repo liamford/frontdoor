@@ -1,11 +1,10 @@
 package com.payments.frontdoor.activities;
 
-import com.payments.frontdoor.service.PaymentDispatcherService;
-import com.payments.frontdoor.swagger.model.PaymentResponse.StatusEnum;
-import io.temporal.spring.boot.ActivityImpl;
-import lombok.extern.slf4j.Slf4j;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
+import com.payments.frontdoor.service.PaymentDispatcherService;
+import io.temporal.spring.boot.ActivityImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -41,67 +40,67 @@ public class PaymentActivityImpl implements PaymentActivity {
     }
 
     @Override
-    public StatusEnum executePayment(PaymentInstruction instruction) {
+    public PaymentStepStatus executePayment(PaymentInstruction instruction) {
         log.info("Executing payment: {}", instruction);
         dispatcherService.dispatchPayment(instruction, PaymentStepStatus.EXECUTED);
-        return StatusEnum.ACSP;
+        return PaymentStepStatus.EXECUTED;
     }
 
     @Override
-    public StatusEnum clearAndSettlePayment(PaymentInstruction instruction) {
+    public PaymentStepStatus clearAndSettlePayment(PaymentInstruction instruction) {
         log.info("Clearing and settling payment: {}", instruction);
         dispatcherService.dispatchPayment(instruction, PaymentStepStatus.CLEARED);
 
-        return StatusEnum.ACSC;
+        return PaymentStepStatus.CLEARED;
     }
 
     @Override
-    public StatusEnum sendNotification(PaymentInstruction instruction) {
+    public PaymentStepStatus sendNotification(PaymentInstruction instruction) {
         log.info("Sending notification for payment: {}", instruction);
         dispatcherService.dispatchPayment(instruction, PaymentStepStatus.NOTIFIED);
-        return StatusEnum.ACSP;
+        return PaymentStepStatus.NOTIFIED;
     }
 
     @Override
-    public StatusEnum reconcilePayment(PaymentInstruction instruction) {
+    public PaymentStepStatus reconcilePayment(PaymentInstruction instruction) {
         log.info("Reconciling payment: {}", instruction);
         dispatcherService.dispatchPayment(instruction, PaymentStepStatus.RECONCILED);
-        return StatusEnum.ACSP;
+        return PaymentStepStatus.RECONCILED;
     }
 
     @Override
-    public StatusEnum postPayment(PaymentInstruction instruction) {
+    public PaymentStepStatus postPayment(PaymentInstruction instruction) {
         log.info("Posting payment to ledger: {}", instruction);
         if (instruction.getDebtor().equals(instruction.getCreditor())) {
             throw new IllegalArgumentException("Debtor and creditor accounts are same");
         }
         dispatcherService.dispatchPayment(instruction, PaymentStepStatus.POSTED);
 
-        return StatusEnum.ACSP;
+        return PaymentStepStatus.POSTED;
     }
 
     @Override
-    public StatusEnum generateReports(PaymentInstruction instruction) {
+    public PaymentStepStatus generateReports(PaymentInstruction instruction) {
         log.info("Generating reports for payment: {}", instruction);
         dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REPORTED);
 
-        return StatusEnum.ACSP;
+        return PaymentStepStatus.REPORTED;
     }
 
     @Override
-    public StatusEnum archivePayment(PaymentInstruction instruction) {
+    public PaymentStepStatus archivePayment(PaymentInstruction instruction) {
         log.info("Archiving payment: {}", instruction);
         dispatcherService.dispatchPayment(instruction, PaymentStepStatus.ARCHIVED);
 
-        return StatusEnum.ACSP;
+        return PaymentStepStatus.ARCHIVED;
     }
 
     @Override
-    public StatusEnum refundPayment(PaymentInstruction instruction) {
+    public PaymentStepStatus refundPayment(PaymentInstruction instruction) {
         log.info("Refunding payment: {}", instruction);
         dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REFUND);
 
-        return StatusEnum.RJCT;
+        return PaymentStepStatus.REFUND;
     }
 
     private PaymentInstruction convertToPaymentInstruction(PaymentDetails details) {

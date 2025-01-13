@@ -3,12 +3,11 @@ package com.payments.frontdoor.activity.unit;
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.activities.PaymentActivityImpl;
 import com.payments.frontdoor.activities.PaymentStepStatus;
-import com.payments.frontdoor.service.PaymentDispatcherService;
-import com.payments.frontdoor.swagger.model.Account;
-import com.payments.frontdoor.swagger.model.PaymentResponse;
-import io.temporal.testing.TestActivityExtension;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
+import com.payments.frontdoor.service.PaymentDispatcherService;
+import com.payments.frontdoor.swagger.model.Account;
+import io.temporal.testing.TestActivityExtension;
 import org.junit.Rule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -101,10 +100,10 @@ import static org.mockito.Mockito.doNothing;
         PaymentInstruction paymentInstruction = createPaymentInstruction();
         PaymentDispatcherService paymentDispatcherService1 = Mockito.mock(PaymentDispatcherService.class);
         doNothing().when(paymentDispatcherService1).dispatchPayment(paymentInstruction, PaymentStepStatus.EXECUTED);
-        PaymentResponse.StatusEnum response = activity.executePayment(paymentInstruction);
+        PaymentStepStatus response = activity.executePayment(paymentInstruction);
 
         assertNotNull(response);
-        assertEquals(PaymentResponse.StatusEnum.ACSP, response);
+        assertEquals(PaymentStepStatus.EXECUTED, response);
     }
 
     @Test
@@ -112,10 +111,10 @@ import static org.mockito.Mockito.doNothing;
         PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
-        PaymentResponse.StatusEnum response = activity.clearAndSettlePayment(paymentInstruction);
+        PaymentStepStatus response = activity.clearAndSettlePayment(paymentInstruction);
 
         assertNotNull(response);
-        assertEquals(PaymentResponse.StatusEnum.ACSC, response);
+        assertEquals(PaymentStepStatus.CLEARED, response);
     }
 
     @Test
@@ -123,10 +122,10 @@ import static org.mockito.Mockito.doNothing;
         PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
-        PaymentResponse.StatusEnum response = activity.sendNotification(paymentInstruction);
+        PaymentStepStatus response = activity.sendNotification(paymentInstruction);
 
         assertNotNull(response);
-        assertEquals(PaymentResponse.StatusEnum.ACSP, response);
+        assertEquals(PaymentStepStatus.NOTIFIED, response);
     }
 
     @Test
@@ -134,10 +133,10 @@ import static org.mockito.Mockito.doNothing;
         PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
-        PaymentResponse.StatusEnum response = activity.reconcilePayment(paymentInstruction);
+        PaymentStepStatus response = activity.reconcilePayment(paymentInstruction);
 
         assertNotNull(response);
-        assertEquals(PaymentResponse.StatusEnum.ACSP, response);
+        assertEquals(PaymentStepStatus.RECONCILED, response);
     }
 
     @Test
@@ -145,10 +144,10 @@ import static org.mockito.Mockito.doNothing;
         PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
-        PaymentResponse.StatusEnum response = activity.postPayment(paymentInstruction);
+        PaymentStepStatus response = activity.postPayment(paymentInstruction);
 
         assertNotNull(response);
-        assertEquals(PaymentResponse.StatusEnum.ACSP, response);
+        assertEquals(PaymentStepStatus.POSTED, response);
     }
 
     @Test
@@ -156,10 +155,10 @@ import static org.mockito.Mockito.doNothing;
         PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
-        PaymentResponse.StatusEnum response = activity.generateReports(paymentInstruction);
+        PaymentStepStatus response = activity.generateReports(paymentInstruction);
 
         assertNotNull(response);
-        assertEquals(PaymentResponse.StatusEnum.ACSP, response);
+        assertEquals(PaymentStepStatus.REPORTED, response);
     }
 
     @Test
@@ -167,10 +166,10 @@ import static org.mockito.Mockito.doNothing;
         PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
-        PaymentResponse.StatusEnum response = activity.archivePayment(paymentInstruction);
+        PaymentStepStatus response = activity.archivePayment(paymentInstruction);
 
         assertNotNull(response);
-        assertEquals(PaymentResponse.StatusEnum.ACSP, response);
+        assertEquals(PaymentStepStatus.ARCHIVED, response);
     }
 
     @Test
@@ -178,9 +177,9 @@ import static org.mockito.Mockito.doNothing;
         PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
-        PaymentResponse.StatusEnum response = activity.refundPayment(paymentInstruction);
+        PaymentStepStatus response = activity.refundPayment(paymentInstruction);
 
         assertNotNull(response);
-        assertEquals(PaymentResponse.StatusEnum.RJCT, response);
+        assertEquals(PaymentStepStatus.REFUND, response);
     }
 }
