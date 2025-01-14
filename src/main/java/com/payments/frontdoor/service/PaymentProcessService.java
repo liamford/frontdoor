@@ -3,6 +3,9 @@ package com.payments.frontdoor.service;
 import com.google.protobuf.Timestamp;
 import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.config.TemporalWorkflowConfig;
+import com.payments.frontdoor.model.ActivityResult;
+import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.model.WorkflowResult;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.EventType;
@@ -14,12 +17,10 @@ import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionResponse;
 import io.temporal.api.workflowservice.v1.GetWorkflowExecutionHistoryRequest;
 import io.temporal.api.workflowservice.v1.GetWorkflowExecutionHistoryResponse;
+import io.temporal.client.ActivityCompletionClient;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import lombok.AllArgsConstructor;
-import com.payments.frontdoor.model.ActivityResult;
-import com.payments.frontdoor.model.PaymentDetails;
-import com.payments.frontdoor.model.WorkflowResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -127,5 +128,11 @@ public class PaymentProcessService {
         return scheduledEvent.getActivityTaskScheduledEventAttributes()
                 .getActivityType()
                 .getName();
+    }
+
+    public void sendToken(byte[] token) {
+        ActivityCompletionClient completionClient = workflowClient.newActivityCompletionClient();
+        completionClient.complete(token, PaymentStepStatus.POSTED);
+
     }
 }

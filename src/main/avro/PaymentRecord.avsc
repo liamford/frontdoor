@@ -54,6 +54,11 @@
     {
       "name": "currency",
       "type": "string"
+    },
+    {
+      "name": "token",
+      "type": ["null", "bytes"],
+      "default": null
     }
   ]
 }

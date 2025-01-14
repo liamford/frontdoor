@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import com.payments.frontdoor.model.PaymentInstruction;
 import org.springframework.stereotype.Service;
 
+import java.nio.ByteBuffer;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -17,9 +19,12 @@ public class PaymentDispatcherService {
     private final KafkaProducer kafkaProducer;
     private final PaymentTopicService paymentTopicService;
 
-    public void dispatchPayment(PaymentInstruction instruction, PaymentStepStatus status) {
+    public void dispatchPayment(PaymentInstruction instruction, PaymentStepStatus status, byte[] taskToken) {
         String topic = paymentTopicService.getTopicName(status);
         PaymentRecord paymentRecord = convertToPaymentRecord(instruction);
+        if(taskToken != null) {
+            paymentRecord.setToken(ByteBuffer.wrap(taskToken));
+        }
         kafkaProducer.sendMessage(topic, instruction.getPaymentId(), paymentRecord);
     }
 

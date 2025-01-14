@@ -3,9 +3,13 @@ package com.payments.frontdoor.activities;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
 import com.payments.frontdoor.service.PaymentDispatcherService;
+import io.temporal.activity.Activity;
+import io.temporal.activity.ActivityExecutionContext;
 import io.temporal.spring.boot.ActivityImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.util.concurrent.ForkJoinPool;
 
 @Slf4j
 @Component
@@ -42,14 +46,14 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public PaymentStepStatus executePayment(PaymentInstruction instruction) {
         log.info("Executing payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.EXECUTED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.EXECUTED, null);
         return PaymentStepStatus.EXECUTED;
     }
 
     @Override
     public PaymentStepStatus clearAndSettlePayment(PaymentInstruction instruction) {
         log.info("Clearing and settling payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.CLEARED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.CLEARED, null);
 
         return PaymentStepStatus.CLEARED;
     }
@@ -57,14 +61,14 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public PaymentStepStatus sendNotification(PaymentInstruction instruction) {
         log.info("Sending notification for payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.NOTIFIED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.NOTIFIED, null);
         return PaymentStepStatus.NOTIFIED;
     }
 
     @Override
     public PaymentStepStatus reconcilePayment(PaymentInstruction instruction) {
         log.info("Reconciling payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.RECONCILED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.RECONCILED, null);
         return PaymentStepStatus.RECONCILED;
     }
 
@@ -74,15 +78,19 @@ public class PaymentActivityImpl implements PaymentActivity {
         if (instruction.getDebtor().equals(instruction.getCreditor())) {
             throw new IllegalArgumentException("Debtor and creditor accounts are same");
         }
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.POSTED);
+        ActivityExecutionContext context = Activity.getExecutionContext();
+        byte[] taskToken = context.getTaskToken();
 
+        ForkJoinPool.commonPool().execute(() ->
+                dispatcherService.dispatchPayment(instruction, PaymentStepStatus.POSTED, taskToken));
+        context.doNotCompleteOnReturn();
         return PaymentStepStatus.POSTED;
     }
 
     @Override
     public PaymentStepStatus generateReports(PaymentInstruction instruction) {
         log.info("Generating reports for payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REPORTED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REPORTED, null);
 
         return PaymentStepStatus.REPORTED;
     }
@@ -90,7 +98,7 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public PaymentStepStatus archivePayment(PaymentInstruction instruction) {
         log.info("Archiving payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.ARCHIVED);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.ARCHIVED, null);
 
         return PaymentStepStatus.ARCHIVED;
     }
@@ -98,7 +106,7 @@ public class PaymentActivityImpl implements PaymentActivity {
     @Override
     public PaymentStepStatus refundPayment(PaymentInstruction instruction) {
         log.info("Refunding payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REFUND);
+        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REFUND, null);
 
         return PaymentStepStatus.REFUND;
     }

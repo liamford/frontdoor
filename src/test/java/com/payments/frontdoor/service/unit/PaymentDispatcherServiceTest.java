@@ -48,7 +48,7 @@ class PaymentDispatcherServiceTest {
         when(paymentTopicService.getTopicName(status)).thenReturn(expectedTopic);
 
         // Act
-        paymentDispatcherService.dispatchPayment(instruction, status);
+        paymentDispatcherService.dispatchPayment(instruction, status, null);
 
         // Assert
         verify(paymentTopicService).getTopicName(status);
