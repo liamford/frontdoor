@@ -1,7 +1,8 @@
 package com.payments.frontdoor.service.unit;
 
 
-import com.payments.avro.PaymentRecord;
+
+import com.payments.frontdoor.avro.PaymentRecord;
 import com.payments.frontdoor.service.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;

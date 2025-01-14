@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "PaymentRecord",
-  "namespace": "com.payments.avro",
+  "namespace": "com.payments.frontdoor.avro",
   "fields": [
     {
       "name": "paymentStatus",
@@ -13,36 +13,19 @@
     },
     {
       "name": "debtor",
-      "type": {
-        "type": "record",
-        "name": "Account",
-        "fields": [
-          {
-            "name": "accountNumber",
-            "type": "string"
-          },
-          {
-            "name": "accountName",
-            "type": "string"
-          }
-        ]
-      }
-    },
-    {
-      "name": "creditor",
-      "type": "Account"
-    },
-    {
-      "name": "amount",
-      "type": "double"
-    },
-    {
-      "name": "currency",
-      "type": "string"
+      "type": "com.payments.frontdoor.avro.Account"
     },
     {
       "name": "paymentReference",
       "type": "string"
+    },
+    {
+      "name": "creditor",
+      "type": "com.payments.frontdoor.avro.Account"
+    },
+    {
+      "name": "amount",
+      "type": "double"
     },
     {
       "name": "paymentDate",
@@ -66,6 +49,10 @@
     },
     {
       "name": "bankName",
+      "type": "string"
+    },
+    {
+      "name": "currency",
       "type": "string"
     }
   ]

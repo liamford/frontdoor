@@ -1,8 +1,9 @@
 package com.payments.frontdoor.service;
 
-import com.payments.avro.Account;
-import com.payments.avro.PaymentRecord;
+
 import com.payments.frontdoor.activities.PaymentStepStatus;
+import com.payments.frontdoor.avro.Account;
+import com.payments.frontdoor.avro.PaymentRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.payments.frontdoor.model.PaymentInstruction;

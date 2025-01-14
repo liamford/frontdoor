@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "Account",
+  "namespace": "com.payments.frontdoor.avro",
+  "fields": [
+    {
+      "name": "accountNumber",
+      "type": "string"
+    },
+    {
+      "name": "accountName",
+      "type": "string"
+    }
+  ]
+}

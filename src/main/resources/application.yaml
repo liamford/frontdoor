@@ -52,13 +52,17 @@ spring:
         - com.payments.frontdoor.activities
   profiles:
     active: local
+  devtools:
+    restart:
+      enabled: false
+      exclude: com.payments.frontdoor.avro.*
+      additional-exclude: com/payments/frontdoor/avro/PaymentRecord.class
 server:
   port: 8080
   error:
     include-stacktrace: on_param
   servlet:
     context-path: /api/payments/v1
-
 payments:
   kafka:
     topics:

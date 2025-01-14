@@ -1,7 +1,8 @@
 package com.payments.frontdoor.service;
 
-import com.payments.avro.PaymentRecord;
+
 import com.payments.frontdoor.activities.PaymentStepStatus;
+import com.payments.frontdoor.avro.PaymentRecord;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

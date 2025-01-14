@@ -21,6 +21,9 @@ java {
 avro {
 	stringType = 'CharSequence'
 	outputCharacterEncoding = 'UTF-8'
+	fieldVisibility = "PRIVATE"
+	createSetters = true
+	enableDecimalLogicalType = true
 }
 
 configurations {
@@ -49,7 +52,6 @@ dependencies {
 	implementation 'io.temporal:temporal-spring-boot-starter-alpha:1.23.2'
 	swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.52'
 	compileOnly 'org.projectlombok:lombok'
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -111,6 +113,13 @@ sourceSets.main.java.srcDir "${swaggerSources.payment.code.outputDir}/src/main/j
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.named('generateAvroJava').configure {
+	source("src/main/avro")
+	// Specify the order of compilation if needed
+	include "Account.avsc"
+	include "PaymentRecord.avsc"
 }
 
 tasks.named('jar') {

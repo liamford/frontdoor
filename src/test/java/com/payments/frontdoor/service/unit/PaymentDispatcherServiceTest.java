@@ -1,9 +1,10 @@
 package com.payments.frontdoor.service.unit;
 
 
-import com.payments.avro.Account;
-import com.payments.avro.PaymentRecord;
+
 import com.payments.frontdoor.activities.PaymentStepStatus;
+import com.payments.frontdoor.avro.Account;
+import com.payments.frontdoor.avro.PaymentRecord;
 import com.payments.frontdoor.service.KafkaProducer;
 import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.service.PaymentTopicService;

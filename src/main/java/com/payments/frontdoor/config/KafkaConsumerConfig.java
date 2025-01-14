@@ -1,6 +1,7 @@
 package com.payments.frontdoor.config;
 
-import com.payments.avro.PaymentRecord;
+
+import com.payments.frontdoor.avro.PaymentRecord;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
