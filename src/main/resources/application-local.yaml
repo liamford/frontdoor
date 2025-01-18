@@ -1,4 +1,6 @@
 server:
+  ssl:
+    enabled: false
   port: 8080
   error:
     include-stacktrace: always

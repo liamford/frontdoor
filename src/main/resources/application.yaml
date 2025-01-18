@@ -76,4 +76,9 @@ payments:
       refund: payments.refund.v1
       reported: payments.reported.v1
       archived: payments.archived.v1
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,workerinfo
 

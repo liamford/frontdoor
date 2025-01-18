@@ -55,24 +55,24 @@ class PaymentDispatcherServiceTest {
         verify(kafkaProducer).sendMessage(
                 eq(expectedTopic),
                 eq(instruction.getPaymentId()),
-                argThat(record -> validatePaymentRecord(record, instruction))
+                argThat(paymentRecord -> validatePaymentRecord(paymentRecord, instruction))
         );
     }
 
-    private boolean validatePaymentRecord(PaymentRecord record, PaymentInstruction instruction) {
-        return record.getPaymentId().equals(instruction.getPaymentId()) &&
-                Double.compare(record.getAmount(), instruction.getAmount().doubleValue()) == 0 &&
-                record.getCurrency().equals(instruction.getCurrency()) &&
-                record.getPaymentReference().equals(instruction.getPaymentReference()) &&
-                record.getPaymentDate().equals(instruction.getPaymentDate().toString()) &&
-                record.getBankAddress().equals(instruction.getBankAddress()) &&
-                record.getBankCountry().equals(instruction.getBankCountry()) &&
-                record.getBankCity().equals(instruction.getBankCity()) &&
-                record.getBic().equals(instruction.getBic()) &&
-                record.getBankName().equals(instruction.getBankName()) &&
-                record.getPaymentStatus().equals(instruction.getPaymentStatus()) &&
-                validateAccount(record.getDebtor(), instruction.getDebtor()) &&
-                validateAccount(record.getCreditor(), instruction.getCreditor());
+    private boolean validatePaymentRecord(PaymentRecord paymentRecord, PaymentInstruction instruction) {
+        return paymentRecord.getPaymentId().equals(instruction.getPaymentId()) &&
+                Double.compare(paymentRecord.getAmount(), instruction.getAmount().doubleValue()) == 0 &&
+                paymentRecord.getCurrency().equals(instruction.getCurrency()) &&
+                paymentRecord.getPaymentReference().equals(instruction.getPaymentReference()) &&
+                paymentRecord.getPaymentDate().equals(instruction.getPaymentDate().toString()) &&
+                paymentRecord.getBankAddress().equals(instruction.getBankAddress()) &&
+                paymentRecord.getBankCountry().equals(instruction.getBankCountry()) &&
+                paymentRecord.getBankCity().equals(instruction.getBankCity()) &&
+                paymentRecord.getBic().equals(instruction.getBic()) &&
+                paymentRecord.getBankName().equals(instruction.getBankName()) &&
+                paymentRecord.getPaymentStatus().equals(instruction.getPaymentStatus()) &&
+                validateAccount(paymentRecord.getDebtor(), instruction.getDebtor()) &&
+                validateAccount(paymentRecord.getCreditor(), instruction.getCreditor());
     }
 
     private boolean validateAccount(Account actual, com.payments.frontdoor.swagger.model.Account expected) {

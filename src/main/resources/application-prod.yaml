@@ -1,9 +1,15 @@
 server:
   port: 8080
+  ssl:
+    enabled: true
+    key-store: classpath:certificates/keystore.jks
+    key-store-password: ${KEYSTORE_PASSWORD}
+    key-alias: temporal-client
+    key-store-type: JKS
   error:
     include-stacktrace: on_param
 spring:
   temporal:
     namespace: default
     connection:
-        target: temporaltest-frontend:7233
+        target: 127.0.0.1:7233
