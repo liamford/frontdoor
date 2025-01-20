@@ -3,6 +3,7 @@ package com.payments.frontdoor.activity.unit;
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.activities.PaymentActivityImpl;
 import com.payments.frontdoor.activities.PaymentStepStatus;
+import com.payments.frontdoor.exception.PaymentAuthorizationFailedException;
 import com.payments.frontdoor.model.PaymentAuthorizationResponse;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
@@ -21,13 +22,14 @@ import org.mockito.junit.MockitoRule;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
- class PaymentActivityTest {
+class PaymentActivityTest {
 
     PaymentDispatcherService paymentDispatcherService = Mockito.mock(PaymentDispatcherService.class);
     PaymentApiConnector paymentApiConnector = Mockito.mock(PaymentApiConnector.class);
@@ -58,6 +60,10 @@ import static org.mockito.Mockito.when;
                 .creditor(creditor)
                 .paymentReference("REF123")
                 .paymentDate(LocalDate.now())
+                .headers(new HashMap<String, String>() {{
+                    put("X-Idempotency-Key", "12345");
+                    put("x-correlation-id", "TX-" + System.currentTimeMillis());
+                }})
                 .build();
     }
 
@@ -99,6 +105,21 @@ import static org.mockito.Mockito.when;
         boolean response = activity.authorizePayment(paymentInstruction);
 
         assertTrue(response);
+    }
+
+    @Test
+    void testUnAuthorizePayment() {
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
+        PaymentInstruction paymentInstruction = createPaymentInstruction();
+        PaymentAuthorizationResponse authorizeResponse = PaymentAuthorizationResponse.builder()
+                .status("failed")
+                .build();
+        when(paymentApiConnector.callAuthorizePayment(paymentInstruction)).thenReturn(authorizeResponse);
+        assertThrowsExactly(
+                PaymentAuthorizationFailedException.class,
+                () -> activity.authorizePayment(paymentInstruction)
+        );
+
     }
 
     @Test

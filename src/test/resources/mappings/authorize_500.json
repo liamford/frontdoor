@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/api/authorize",
+    "headers": {
+      "Content-Type": {
+        "contains": "application/json"
+      },
+      "x-correlation-id": {
+        "matches": ".*500$"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "equalToJson": "{ \"method\" : \"authorize-payment\"}",
+        "ignoreArrayOrder": true,
+        "ignoreExtraElements": true
+      }
+    ]
+  },
+  "response": {
+    "status": 500,
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

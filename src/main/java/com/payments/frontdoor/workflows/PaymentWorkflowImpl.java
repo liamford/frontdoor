@@ -2,7 +2,7 @@ package com.payments.frontdoor.workflows;
 
 
 import com.payments.frontdoor.activities.PaymentStepStatus;
-import com.payments.frontdoor.exception.PaymentAuthorizationException;
+import com.payments.frontdoor.exception.*;
 import com.payments.frontdoor.util.PaymentUtil;
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
@@ -36,9 +36,14 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             .setBackoffCoefficient(2) // Wait 1 second, then 2, then 4, etc
             .setDoNotRetry(IllegalArgumentException.class.getName(),
                     NullPointerException.class.getName(),
-                    PaymentAuthorizationException.class.getName()
+                    PaymentAuthorizationFailedException.class.getName(),
+                    PaymentBadRequestException.class.getName(),
+                    PaymentUnauthorizedException.class.getName(),
+                    PaymentForbiddenException.class.getName(),
+                    PaymentConflictException.class.getName(),
+                    PaymentClientException.class.getName()
             ) // Do not retry for these exceptions
-            .setMaximumAttempts(5000) // Fail after 5000 attempts
+            .setMaximumAttempts(5) // Fail after 5000 attempts
             .build();
 
     // ActivityOptions specify the limits on how long an Activity can execute before
@@ -76,7 +81,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             Promise.allOf(isAuthorizedPromise, isOrderValidPromise).get();
             Workflow.getLogger(PaymentWorkflowImpl.class).info("Payment successfully validated and authorized.");
 
-        } catch (PaymentAuthorizationException e) {
+        } catch (PaymentAuthorizationFailedException e) {
             log.error("Payment validation or authorization failed: ", e);
             Workflow.getLogger(PaymentWorkflowImpl.class).error("Payment validation or authorization failed: ", e);
             throw Workflow.wrap(e);

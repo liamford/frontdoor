@@ -1,6 +1,6 @@
 package com.payments.frontdoor.activities;
 
-import com.payments.frontdoor.exception.PaymentAuthorizationException;
+import com.payments.frontdoor.exception.*;
 import com.payments.frontdoor.model.PaymentAuthorizationResponse;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
@@ -20,9 +20,10 @@ import java.util.concurrent.ForkJoinPool;
 public class PaymentActivityImpl implements PaymentActivity {
 
 
+    public static final String CORRELATION_ID_HEADER = "x-correlation-id";
+    private static final String SUCCESS_STATUS = "success";
     private final PaymentApiConnector paymentApiConnector;
     private final PaymentDispatcherService dispatcherService;
-    private static final String SUCCESS_STATUS = "success";
 
 
     public PaymentActivityImpl(PaymentApiConnector paymentApiConnector, PaymentDispatcherService dispatcherService) {
@@ -45,6 +46,7 @@ public class PaymentActivityImpl implements PaymentActivity {
 
     @Override
     public boolean authorizePayment(PaymentInstruction instruction) {
+        String correlationId = instruction.getHeaders().get(CORRELATION_ID_HEADER);
         try {
             log.info("Initiating payment authorization for instruction: {}", instruction);
 
@@ -53,9 +55,36 @@ public class PaymentActivityImpl implements PaymentActivity {
             log.debug("Payment authorization successful for instruction: {}", instruction);
             return true;
 
+        }
+        catch (PaymentAuthorizationFailedException e) {
+            log.error("Payment Authorization failed: [correlationId={}] - {}",
+                    correlationId,
+                    e.getMessage());
+            throw e;
+
+        } catch (PaymentBadRequestException e) {
+            log.error("Invalid payment request: [correlationId={}] - {}",
+                    correlationId,
+                    e.getMessage());
+            throw e;
+
+        } catch (PaymentUnauthorizedException | PaymentForbiddenException e) {
+            log.error("Authentication/Authorization failed: [correlationId={}] - {}",
+                    correlationId,
+                    e.getMessage());
+            throw e;
+
+        } catch (PaymentServerException e) {
+            log.error("Payment service error: [correlationId={}] - {}",
+                    correlationId,
+                    e.getMessage());
+            throw new PaymentProcessingException("Payment service temporarily unavailable", e);
+
         } catch (Exception e) {
-            log.error("Payment authorization failed for instruction: {}", instruction, e);
-            throw new PaymentAuthorizationException("Payment authorization failed", e);
+            log.error("Unexpected error during payment authorization: [correlationId={}]",
+                    correlationId,
+                    e);
+            throw new PaymentProcessingException("Unexpected error during payment processing", e);
         }
     }
 
@@ -63,7 +92,7 @@ public class PaymentActivityImpl implements PaymentActivity {
 
     private void validateAuthorizationResponse(PaymentAuthorizationResponse response) {
         if (!SUCCESS_STATUS.equalsIgnoreCase(response.getStatus())) {
-            throw new PaymentAuthorizationException(
+            throw new PaymentAuthorizationFailedException(
                     String.format("Payment authorization failed with status: %s", response.getStatus())
             );
         }
