@@ -7,6 +7,7 @@ import com.payments.frontdoor.swagger.model.Account;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import com.payments.frontdoor.workflows.RefundWorkflow;
 import com.payments.frontdoor.workflows.RefundWorkflowImpl;
+import com.payments.frontdoor.workflows.ReportWorkflowImpl;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
@@ -39,7 +40,7 @@ class RefundWorkflowTest {
     @RegisterExtension
     public  final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
-                    .setWorkflowTypes(RefundWorkflowImpl.class)
+                    .setWorkflowTypes(RefundWorkflowImpl.class, ReportWorkflowImpl.class)
                    .setActivityImplementations(new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService))
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();

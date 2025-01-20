@@ -1,25 +1,31 @@
 package com.payments.frontdoor.workflows;
 
 
+import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.exception.*;
-import com.payments.frontdoor.util.PaymentUtil;
-import com.payments.frontdoor.activities.PaymentActivity;
+import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.model.PaymentInstruction;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
+import com.payments.frontdoor.util.PaymentUtil;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Async;
-import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Promise;
 import io.temporal.workflow.Workflow;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.payments.frontdoor.model.PaymentDetails;
-import com.payments.frontdoor.model.PaymentInstruction;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+
+import static com.payments.frontdoor.util.PaymentUtil.startRefundWorkflow;
+import static com.payments.frontdoor.util.PaymentUtil.startReportWorkflow;
 
 @WorkflowImpl(workers = "send-payment-worker")
 @Slf4j
@@ -43,7 +49,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
                     PaymentConflictException.class.getName(),
                     PaymentClientException.class.getName()
             ) // Do not retry for these exceptions
-            .setMaximumAttempts(5) // Fail after 5000 attempts
+            .setMaximumAttempts(5) // Fail after 5 attempts
             .build();
 
     // ActivityOptions specify the limits on how long an Activity can execute before
@@ -77,13 +83,14 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         try {
             Promise<Boolean> isOrderValidPromise = Async.function(activities::managePaymentOrder, instruction);
             Promise<Boolean> isAuthorizedPromise = Async.function(activities::authorizePayment, instruction);
-
             Promise.allOf(isAuthorizedPromise, isOrderValidPromise).get();
+
             Workflow.getLogger(PaymentWorkflowImpl.class).info("Payment successfully validated and authorized.");
 
-        } catch (PaymentAuthorizationFailedException e) {
+        } catch (ActivityFailure e) {
             log.error("Payment validation or authorization failed: ", e);
             Workflow.getLogger(PaymentWorkflowImpl.class).error("Payment validation or authorization failed: ", e);
+            startReportWorkflow(instruction);
             throw Workflow.wrap(e);
         }
 
@@ -105,29 +112,22 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         try {
             steps.add(activities.postPayment(instruction));
 
-        } catch (Exception e) {
+        } catch (ActivityFailure e) {
+            log.error("Post-payment failed: exception:", e);
             Workflow.getLogger(PaymentWorkflowImpl.class).error("Post-payment failed: ", e);
             // Trigger refund sub-workflow
-            ChildWorkflowOptions childWorkflowOptions = ChildWorkflowOptions.newBuilder()
-                    .setWorkflowId(instruction.getPaymentReference() + "-refund")
-                    .build();
-            RefundWorkflow refundWorkflow = Workflow.newChildWorkflowStub(RefundWorkflow.class, childWorkflowOptions);
-
-            refundWorkflow.processRefund(instruction);
+            startRefundWorkflow(instruction);
             throw Workflow.wrap(e);
         }
 
-        // Step 9: Generate Reports
-        steps.add(activities.generateReports(instruction));
-
-        // Step 10: Archive Payment
-        steps.add(activities.archivePayment(instruction));
 
         Workflow.getLogger(PaymentWorkflowImpl.class).info("Payment processing workflow completed.");
-
+        startReportWorkflow(instruction);
         return PaymentUtil.createPaymentResponse(instruction.getPaymentId(), PaymentResponse.StatusEnum.ACSC);
 
     }
+
+
 
     @Override
     public void waitForStep(PaymentStepStatus paymentStepStatus) {

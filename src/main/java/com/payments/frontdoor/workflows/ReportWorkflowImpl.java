@@ -1,21 +1,18 @@
 package com.payments.frontdoor.workflows;
 
-import com.payments.frontdoor.util.PaymentUtil;
 import com.payments.frontdoor.activities.PaymentActivity;
+import com.payments.frontdoor.model.PaymentInstruction;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
+import com.payments.frontdoor.util.PaymentUtil;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.spring.boot.WorkflowImpl;
-import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
-import com.payments.frontdoor.model.PaymentInstruction;
 
 import java.time.Duration;
 
-import static com.payments.frontdoor.util.PaymentUtil.startReportWorkflow;
-
 @WorkflowImpl(workers = "send-payment-worker")
-public class RefundWorkflowImpl implements RefundWorkflow {
+public class ReportWorkflowImpl implements ReportWorkflow {
 
     // RetryOptions specify how to automatically handle retries when Activities fail
     private final RetryOptions retryoptions = RetryOptions.newBuilder()
@@ -38,9 +35,9 @@ public class RefundWorkflowImpl implements RefundWorkflow {
     private final PaymentActivity activities = Workflow.newActivityStub(PaymentActivity.class, defaultActivityOptions);
 
     @Override
-    public PaymentResponse processRefund(PaymentInstruction instruction) {
-        activities.refundPayment(instruction);
-        startReportWorkflow(instruction);
-        return PaymentUtil.createPaymentResponse(instruction.getPaymentId(), PaymentResponse.StatusEnum.RJCT);
+    public String processReporting(PaymentInstruction instruction) {
+        activities.generateReports(instruction);
+        activities.archivePayment(instruction);
+        return "Successful";
     }
 }

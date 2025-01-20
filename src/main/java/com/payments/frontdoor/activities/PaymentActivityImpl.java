@@ -62,7 +62,8 @@ public class PaymentActivityImpl implements PaymentActivity {
                     e.getMessage());
             throw e;
 
-        } catch (PaymentBadRequestException e) {
+        }
+        catch (PaymentBadRequestException e) {
             log.error("Invalid payment request: [correlationId={}] - {}",
                     correlationId,
                     e.getMessage());
