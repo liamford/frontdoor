@@ -47,7 +47,23 @@ To set up Temporal using the Helm chart, follow these steps:
     helm install temporaltest temporal/temporal
     ```
 
+
+## Kafka and API Stubs for Testing
+
+To set up Kafka and mock API services for local development and testing, follow these steps:
+
+docker-compose -f src/test/resources/docker-compose.yml up -d
+
+The setup includes:
+
+Apache Kafka with Zookeeper for message streaming
+
+MockServer for simulating API responses during testing
+
+
 ## Getting Started
+
+
 
 ### Building the Project
 
