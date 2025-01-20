@@ -1,26 +1,20 @@
 package com.payments.frontdoor.model;
 
-
 import com.payments.frontdoor.swagger.model.Account;
+import lombok.Builder;
+import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Map;
 
-
-@lombok.Data
-@lombok.AllArgsConstructor
-@lombok.NoArgsConstructor
-@lombok.Builder
-public class PaymentDetails {
-
-    private String paymentStatus;
+@Data
+@Builder
+public class PaymentAuthorizationRequest {
+    private String method;
     private String paymentId;
     private Account debtor;
     private Account creditor;
-    private BigDecimal amount;
+    private double amount;
     private String currency;
     private String paymentReference;
     private LocalDate paymentDate;
-    private Map<String, String> headers;
 }

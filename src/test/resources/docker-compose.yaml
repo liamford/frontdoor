@@ -84,3 +84,13 @@ services:
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
       CONNECT_PLUGIN_PATH: /usr/share/java
+
+  wiremock:
+    image: "wiremock/wiremock:latest"
+    container_name: stub
+    ports:
+      - 3001:8080
+    volumes:
+      - ./__files:/home/wiremock/__files
+      - ./mappings:/home/wiremock/mappings
+    entrypoint: [ "/docker-entrypoint.sh", "--global-response-templating", "--disable-gzip", "--verbose" ]

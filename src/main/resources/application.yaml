@@ -76,6 +76,9 @@ payments:
       refund: payments.refund.v1
       reported: payments.reported.v1
       archived: payments.archived.v1
+  api:
+    urls:
+      authorize: http://localhost:3001/api/authorize
 management:
   endpoints:
     web:

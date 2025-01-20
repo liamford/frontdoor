@@ -1,0 +1,28 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/api/authorize",
+    "headers": {
+      "Content-Type": {
+        "contains": "application/json"
+      },
+      "x-correlation-id": {
+        "matches": "^(?!.*NA$).*"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "equalToJson": "{ \"method\" : \"authorize-payment\"}",
+        "ignoreArrayOrder": true,
+        "ignoreExtraElements": true
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "authorize.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

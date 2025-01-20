@@ -5,6 +5,7 @@ import com.payments.frontdoor.swagger.model.Account;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 
 @lombok.Data
 @lombok.AllArgsConstructor
@@ -24,4 +25,5 @@ public class PaymentInstruction {
     private String bankAddress;
     private String bankCity;
     private String bankCountry;
+    private Map<String, String> headers;
 }

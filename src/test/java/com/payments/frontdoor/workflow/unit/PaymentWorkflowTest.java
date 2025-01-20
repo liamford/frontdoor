@@ -3,6 +3,7 @@ package com.payments.frontdoor.workflow.unit;
 import com.payments.frontdoor.activities.PaymentActivityImpl;
 import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.service.PaymentApiConnector;
 import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.swagger.model.Account;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
@@ -33,12 +34,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class PaymentWorkflowTest {
 
     PaymentDispatcherService paymentDispatcherService = Mockito.mock(PaymentDispatcherService.class);
+    PaymentApiConnector paymentApiConnector = Mockito.mock(PaymentApiConnector.class);
+
 
     @RegisterExtension
     public  final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
                     .setWorkflowTypes(PaymentWorkflowImpl.class)
-                    .setActivityImplementations(new PaymentActivityImpl(paymentDispatcherService))
+                    .setActivityImplementations(new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService))
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();
 

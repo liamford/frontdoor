@@ -2,6 +2,7 @@ package com.payments.frontdoor.workflows;
 
 
 import com.payments.frontdoor.activities.PaymentStepStatus;
+import com.payments.frontdoor.exception.PaymentAuthorizationException;
 import com.payments.frontdoor.util.PaymentUtil;
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
@@ -33,7 +34,10 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             .setInitialInterval(Duration.ofSeconds(1)) // Wait 1 second before first retry
             .setMaximumInterval(Duration.ofSeconds(20)) // Do not exceed 20 seconds between retries
             .setBackoffCoefficient(2) // Wait 1 second, then 2, then 4, etc
-            .setDoNotRetry(IllegalArgumentException.class.getName(), NullPointerException.class.getName()) // Do not retry for these exceptions
+            .setDoNotRetry(IllegalArgumentException.class.getName(),
+                    NullPointerException.class.getName(),
+                    PaymentAuthorizationException.class.getName()
+            ) // Do not retry for these exceptions
             .setMaximumAttempts(5000) // Fail after 5000 attempts
             .build();
 
@@ -65,14 +69,17 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         steps.add(PaymentStepStatus.INITIATED);
         // Step 2 & 3: Run Payment Order Management and Payment Authorization in Parallel
 
-        Promise<Boolean> isOrderValidPromise = Async.function(activities::managePaymentOrder, instruction);
-        Promise<Boolean> isAuthorizedPromise = Async.function(activities::authorizePayment, instruction);
+        try {
+            Promise<Boolean> isOrderValidPromise = Async.function(activities::managePaymentOrder, instruction);
+            Promise<Boolean> isAuthorizedPromise = Async.function(activities::authorizePayment, instruction);
 
-        boolean isOrderValid = isOrderValidPromise.get();
-        boolean isAuthorized = isAuthorizedPromise.get();
+            Promise.allOf(isAuthorizedPromise, isOrderValidPromise).get();
+            Workflow.getLogger(PaymentWorkflowImpl.class).info("Payment successfully validated and authorized.");
 
-        if (!isOrderValid || !isAuthorized) {
-            throw new IllegalArgumentException("Payment validation or authorization failed.");
+        } catch (PaymentAuthorizationException e) {
+            log.error("Payment validation or authorization failed: ", e);
+            Workflow.getLogger(PaymentWorkflowImpl.class).error("Payment validation or authorization failed: ", e);
+            throw Workflow.wrap(e);
         }
 
         // Step 4: Execute Payment
@@ -97,7 +104,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             Workflow.getLogger(PaymentWorkflowImpl.class).error("Post-payment failed: ", e);
             // Trigger refund sub-workflow
             ChildWorkflowOptions childWorkflowOptions = ChildWorkflowOptions.newBuilder()
-                    .setWorkflowId( instruction.getPaymentReference() + "-refund")
+                    .setWorkflowId(instruction.getPaymentReference() + "-refund")
                     .build();
             RefundWorkflow refundWorkflow = Workflow.newChildWorkflowStub(RefundWorkflow.class, childWorkflowOptions);
 
@@ -119,7 +126,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
 
     @Override
     public void waitForStep(PaymentStepStatus paymentStepStatus) {
-       steps.add(paymentStepStatus);
+        steps.add(paymentStepStatus);
     }
 
     @Override

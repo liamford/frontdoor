@@ -3,8 +3,10 @@ package com.payments.frontdoor.activity.unit;
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.activities.PaymentActivityImpl;
 import com.payments.frontdoor.activities.PaymentStepStatus;
+import com.payments.frontdoor.model.PaymentAuthorizationResponse;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
+import com.payments.frontdoor.service.PaymentApiConnector;
 import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.swagger.model.Account;
 import io.temporal.testing.TestActivityExtension;
@@ -22,11 +24,13 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
  class PaymentActivityTest {
 
     PaymentDispatcherService paymentDispatcherService = Mockito.mock(PaymentDispatcherService.class);
+    PaymentApiConnector paymentApiConnector = Mockito.mock(PaymentApiConnector.class);
 
 
 
@@ -36,7 +40,7 @@ import static org.mockito.Mockito.doNothing;
     @RegisterExtension
     public  final TestActivityExtension activityExtension =
             TestActivityExtension.newBuilder()
-                    .setActivityImplementations(new PaymentActivityImpl(paymentDispatcherService))
+                    .setActivityImplementations(new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService))
                     .build();
 
     private PaymentInstruction createPaymentInstruction() {
@@ -59,7 +63,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testInitiatePayment() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentDetails paymentDetails = PaymentDetails.builder()
                 .paymentId("12345")
                 .amount(new BigDecimal("100.00"))
@@ -76,7 +80,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testManagePaymentOrder() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         boolean response = activity.managePaymentOrder(paymentInstruction);
@@ -86,9 +90,12 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testAuthorizePayment() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
-
+        PaymentAuthorizationResponse authorizeResponse = PaymentAuthorizationResponse.builder()
+                .status("success")
+                .build();
+        when(paymentApiConnector.callAuthorizePayment(paymentInstruction)).thenReturn(authorizeResponse);
         boolean response = activity.authorizePayment(paymentInstruction);
 
         assertTrue(response);
@@ -96,7 +103,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testExecutePayment() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
         PaymentDispatcherService paymentDispatcherService1 = Mockito.mock(PaymentDispatcherService.class);
         doNothing().when(paymentDispatcherService1).dispatchPayment(paymentInstruction, PaymentStepStatus.EXECUTED, null);
@@ -108,7 +115,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testClearAndSettlePayment() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentStepStatus response = activity.clearAndSettlePayment(paymentInstruction);
@@ -119,7 +126,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testSendNotification() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentStepStatus response = activity.sendNotification(paymentInstruction);
@@ -130,7 +137,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testReconcilePayment() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentStepStatus response = activity.reconcilePayment(paymentInstruction);
@@ -152,7 +159,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testGenerateReports() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentStepStatus response = activity.generateReports(paymentInstruction);
@@ -163,7 +170,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testArchivePayment() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentStepStatus response = activity.archivePayment(paymentInstruction);
@@ -174,7 +181,7 @@ import static org.mockito.Mockito.doNothing;
 
     @Test
     void testRefundPayment() {
-        PaymentActivity activity = new PaymentActivityImpl(paymentDispatcherService);
+        PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
         PaymentStepStatus response = activity.refundPayment(paymentInstruction);

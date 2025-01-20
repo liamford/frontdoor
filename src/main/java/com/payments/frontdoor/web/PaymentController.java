@@ -18,6 +18,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -43,10 +45,14 @@ public class PaymentController {
 
         validateIdempotencyKey(idempotencyKey, request.getPaymentReference());
         String uetr = UUID.randomUUID().toString();
+        Map<String, String> headers = new HashMap<>();
 
-        PaymentDetails paymentDetails = getPaymentDetails(request, uetr);
+        headers.put("x-correlation-id", correlationId);
+        headers.put("x-idempotency-key", idempotencyKey);
 
-        paymentProcessService.processPaymentAsync(paymentDetails, uetr);
+        PaymentDetails paymentDetails = getPaymentDetails(request, uetr , headers);
+
+        paymentProcessService.processPaymentAsync(paymentDetails);
 
         PaymentResponse response = PaymentUtil.createPaymentResponse(uetr, PaymentResponse.StatusEnum.ACTC);
 
@@ -101,7 +107,7 @@ public class PaymentController {
         return response;
     }
 
-    private PaymentDetails getPaymentDetails(PaymentRequest request, String uetr) {
+    private PaymentDetails getPaymentDetails(PaymentRequest request, String uetr, Map<String, String> headers) {
         return PaymentDetails.builder()
                 .paymentStatus(PaymentResponse.StatusEnum.ACTC.toString())
                 .paymentId(uetr)
@@ -111,6 +117,7 @@ public class PaymentController {
                 .currency(request.getCurrency())
                 .paymentReference(request.getPaymentReference())
                 .paymentDate(request.getPaymentDate())
+                .headers(headers)
                 .build();
     }
 

@@ -1,0 +1,11 @@
+{
+  "paymentId": "{{jsonPath request.body '$.paymentId'}}",
+  "status": "success",
+  "authorizationCode": "auth_456def",
+  "description": "Payment {{jsonPath request.body '$.paymentId'}} authorized successfully",
+  "createdAt": "2023-10-01T12:00:00Z",
+  "metadata": {
+    "debtorAccountId": "{{jsonPath request.body '$.debtor.accountNumber'}}",
+    "creditorAccountId": "{{jsonPath request.body '$.creditor.accountNumber'}}"
+  }
+}

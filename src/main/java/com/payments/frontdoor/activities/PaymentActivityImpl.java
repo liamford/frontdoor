@@ -1,7 +1,10 @@
 package com.payments.frontdoor.activities;
 
+import com.payments.frontdoor.exception.PaymentAuthorizationException;
+import com.payments.frontdoor.model.PaymentAuthorizationResponse;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
+import com.payments.frontdoor.service.PaymentApiConnector;
 import com.payments.frontdoor.service.PaymentDispatcherService;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
@@ -17,10 +20,13 @@ import java.util.concurrent.ForkJoinPool;
 public class PaymentActivityImpl implements PaymentActivity {
 
 
-
+    private final PaymentApiConnector paymentApiConnector;
     private final PaymentDispatcherService dispatcherService;
+    private static final String SUCCESS_STATUS = "success";
 
-    public PaymentActivityImpl(PaymentDispatcherService dispatcherService) {
+
+    public PaymentActivityImpl(PaymentApiConnector paymentApiConnector, PaymentDispatcherService dispatcherService) {
+        this.paymentApiConnector = paymentApiConnector;
         this.dispatcherService = dispatcherService;
     }
 
@@ -39,8 +45,28 @@ public class PaymentActivityImpl implements PaymentActivity {
 
     @Override
     public boolean authorizePayment(PaymentInstruction instruction) {
-        log.info("Authorizing payment: {}", instruction);
-        return true; // Assume payment is authorized
+        try {
+            log.info("Initiating payment authorization for instruction: {}", instruction);
+
+            PaymentAuthorizationResponse response = paymentApiConnector.callAuthorizePayment(instruction);
+            validateAuthorizationResponse(response);
+            log.debug("Payment authorization successful for instruction: {}", instruction);
+            return true;
+
+        } catch (Exception e) {
+            log.error("Payment authorization failed for instruction: {}", instruction, e);
+            throw new PaymentAuthorizationException("Payment authorization failed", e);
+        }
+    }
+
+
+
+    private void validateAuthorizationResponse(PaymentAuthorizationResponse response) {
+        if (!SUCCESS_STATUS.equalsIgnoreCase(response.getStatus())) {
+            throw new PaymentAuthorizationException(
+                    String.format("Payment authorization failed with status: %s", response.getStatus())
+            );
+        }
     }
 
     @Override
@@ -126,6 +152,7 @@ public class PaymentActivityImpl implements PaymentActivity {
                 .bankCity("Melbourne")
                 .bic("LIAM123")
                 .bankName("Liam Bank")
+                .headers(details.getHeaders())
                 .build();
     }
 }

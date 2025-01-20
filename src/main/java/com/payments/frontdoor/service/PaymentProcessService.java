@@ -39,8 +39,8 @@ public class PaymentProcessService {
     private final WorkflowServiceStubs service;
 
     @Async
-    public void processPaymentAsync(PaymentDetails paymentDetails, String workflowId) {
-        PaymentWorkflow workflow = temporalWorkflowConfig.sendPaymentWorkflowWithId(workflowClient, workflowId);
+    public void processPaymentAsync(PaymentDetails paymentDetails) {
+        PaymentWorkflow workflow = temporalWorkflowConfig.sendPaymentWorkflowWithId(workflowClient, paymentDetails.getPaymentId());
         WorkflowClient.start(workflow::processPayment, paymentDetails);
     }
 
