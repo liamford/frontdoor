@@ -1,0 +1,5 @@
+{
+  "status": "failed",
+  "errorDetails": "400 Bad Request",
+  "reference": "{{jsonPath request.body '$.paymentReference'}}"
+}

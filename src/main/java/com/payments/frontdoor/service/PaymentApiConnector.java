@@ -3,9 +3,7 @@ package com.payments.frontdoor.service;
 
 import com.payments.frontdoor.config.ApiConnectorCustomProperties;
 import com.payments.frontdoor.exception.*;
-import com.payments.frontdoor.model.PaymentAuthorizationRequest;
-import com.payments.frontdoor.model.PaymentAuthorizationResponse;
-import com.payments.frontdoor.model.PaymentInstruction;
+import com.payments.frontdoor.model.*;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
@@ -25,7 +23,7 @@ public class PaymentApiConnector {
 
 
     public PaymentAuthorizationResponse callAuthorizePayment(PaymentInstruction paymentInstruction) {
-        PaymentAuthorizationRequest requestBody = convertToRequestBody(paymentInstruction);
+        PaymentAuthorizationRequest requestBody = convertToAuthorizationRequestBody(paymentInstruction);
         return webClient.post()
                 .uri(apiConnectorCustomProperties.getAuthorize())
                 .headers(httpHeaders -> paymentInstruction.getHeaders().forEach(httpHeaders::add))
@@ -36,8 +34,25 @@ public class PaymentApiConnector {
                 .onStatus(HttpStatusCode::is5xxServerError, response ->
                         handleServerError(response, paymentInstruction.getHeaders().get("x-correlation-id")))
                 .bodyToMono(PaymentAuthorizationResponse.class)
-                .doOnNext(response -> log.info("Received Response: {}", response))
-                .doOnError(error -> log.error("Error during API call: {}", error.getMessage(), error))
+                .doOnNext(response -> log.info("Received Authorize Payment Response: {}", response))
+                .doOnError(error -> log.error("Error during Authorize Payment API call: {}", error.getMessage(), error))
+                .block(Duration.ofSeconds(30));
+    }
+
+    public PaymentOrderResponse callOrderPayment(PaymentInstruction paymentInstruction) {
+        PaymentOrderRequest requestBody = convertToOrderRequestBody(paymentInstruction);
+        return webClient.post()
+                .uri(apiConnectorCustomProperties.getOrder())
+                .headers(httpHeaders -> paymentInstruction.getHeaders().forEach(httpHeaders::add))
+                .bodyValue(requestBody)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, response ->
+                        handleClientError(response, paymentInstruction.getHeaders().get("x-correlation-id")))
+                .onStatus(HttpStatusCode::is5xxServerError, response ->
+                        handleServerError(response, paymentInstruction.getHeaders().get("x-correlation-id")))
+                .bodyToMono(PaymentOrderResponse.class)
+                .doOnNext(response -> log.info("Received Order Response: {}", response))
+                .doOnError(error -> log.error("Error during Order API call: {}", error.getMessage(), error))
                 .block(Duration.ofSeconds(30));
     }
 
@@ -76,7 +91,7 @@ public class PaymentApiConnector {
 
 
 
-    private PaymentAuthorizationRequest convertToRequestBody(PaymentInstruction paymentInstruction) {
+    private PaymentAuthorizationRequest convertToAuthorizationRequestBody(PaymentInstruction paymentInstruction) {
         return PaymentAuthorizationRequest.builder()
                 .method("authorize-payment")
                 .paymentId(paymentInstruction.getPaymentId())
@@ -86,6 +101,19 @@ public class PaymentApiConnector {
                 .currency(paymentInstruction.getCurrency())
                 .paymentReference(paymentInstruction.getPaymentReference())
                 .paymentDate(paymentInstruction.getPaymentDate())
+                .build();
+    }
+
+    private PaymentOrderRequest convertToOrderRequestBody(PaymentInstruction paymentInstruction) {
+        return PaymentOrderRequest.builder()
+                .paymentId(paymentInstruction.getPaymentId())
+                .debtor(paymentInstruction.getDebtor())
+                .creditor(paymentInstruction.getCreditor())
+                .amount(paymentInstruction.getAmount().doubleValue())  // Converting BigDecimal to double
+                .currency(paymentInstruction.getCurrency())
+                .paymentReference(paymentInstruction.getPaymentReference())
+                .paymentDate(paymentInstruction.getPaymentDate())
+                .priority("Normal")
                 .build();
     }
 

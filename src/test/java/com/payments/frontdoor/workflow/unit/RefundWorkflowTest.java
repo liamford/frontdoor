@@ -82,7 +82,7 @@ class RefundWorkflowTest {
                 () -> {
                     PaymentResponse response = workflow.processRefund(paymentInstruction);
                     assertNotNull(response);
-                    assertEquals(PaymentResponse.StatusEnum.RJCT, response.getStatus());
+                    assertEquals(PaymentResponse.StatusEnum.ACSC, response.getStatus());
                 });
     }
 }

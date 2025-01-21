@@ -1,0 +1,12 @@
+{
+  "paymentOrderId": "{{jsonPath request.body '$.paymentId'}}",
+  "status": "completed",
+  "statusDetails": "Payment {jsonPath request.body '$.paymentId'}} successfully processed.",
+  "processingTimestamp": "2023-10-01T12:00:00Z",
+  "transactionDetails": {
+    "transactionId": "TX98765",
+    "settlementDate": "2025-01-22",
+    "clearingSystem": "ACH"
+  },
+  "reference": "{{jsonPath request.body '$.paymentReference'}}"
+}

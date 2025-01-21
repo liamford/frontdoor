@@ -1,26 +1,26 @@
 {
   "request": {
     "method": "POST",
-    "urlPath": "/api/authorize",
+    "urlPath": "/api/payment-orders/process",
     "headers": {
       "Content-Type": {
         "contains": "application/json"
       },
       "x-correlation-id": {
-        "matches": ".*500$"
+        "matches": "^(?!.*(?:NB|502)$).*"
       }
     },
     "bodyPatterns": [
       {
-        "equalToJson": "{ \"method\" : \"authorize-payment\"}",
+        "equalToJson": "{ \"priority\" : \"Normal\"}",
         "ignoreArrayOrder": true,
         "ignoreExtraElements": true
       }
     ]
   },
   "response": {
-    "status": 500,
-    "bodyFileName": "authorize_500.json",
+    "status": 200,
+    "bodyFileName": "order.json",
     "headers": {
       "Content-Type": "application/json"
     }

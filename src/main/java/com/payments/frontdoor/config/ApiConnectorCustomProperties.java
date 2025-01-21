@@ -11,4 +11,5 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "payments.api.urls")
 public class ApiConnectorCustomProperties {
     private String authorize;
+    private String order;
 }

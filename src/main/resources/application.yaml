@@ -79,6 +79,7 @@ payments:
   api:
     urls:
       authorize: http://localhost:3001/api/authorize
+      order: http://localhost:3001/api/payment-orders/process
 management:
   endpoints:
     web:

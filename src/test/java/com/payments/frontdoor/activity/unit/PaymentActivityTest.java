@@ -7,6 +7,7 @@ import com.payments.frontdoor.exception.PaymentAuthorizationFailedException;
 import com.payments.frontdoor.model.PaymentAuthorizationResponse;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
+import com.payments.frontdoor.model.PaymentOrderResponse;
 import com.payments.frontdoor.service.PaymentApiConnector;
 import com.payments.frontdoor.service.PaymentDispatcherService;
 import com.payments.frontdoor.swagger.model.Account;
@@ -89,6 +90,10 @@ class PaymentActivityTest {
         PaymentActivity activity = new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService);
         PaymentInstruction paymentInstruction = createPaymentInstruction();
 
+        PaymentOrderResponse orderResponse = PaymentOrderResponse.builder()
+                .status("completed")
+                .build();
+        when(paymentApiConnector.callOrderPayment(paymentInstruction)).thenReturn(orderResponse);
         boolean response = activity.managePaymentOrder(paymentInstruction);
 
         assertTrue(response);

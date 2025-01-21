@@ -40,7 +40,9 @@ public class RefundWorkflowImpl implements RefundWorkflow {
     @Override
     public PaymentResponse processRefund(PaymentInstruction instruction) {
         activities.refundPayment(instruction);
+        activities.reconcilePayment(instruction);
+        activities.sendNotification(instruction);
         startReportWorkflow(instruction);
-        return PaymentUtil.createPaymentResponse(instruction.getPaymentId(), PaymentResponse.StatusEnum.RJCT);
+        return PaymentUtil.createPaymentResponse(instruction.getPaymentId(), PaymentResponse.StatusEnum.ACSC);
     }
 }
