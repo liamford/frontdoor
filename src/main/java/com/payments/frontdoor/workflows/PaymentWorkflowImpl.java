@@ -6,7 +6,6 @@ import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.exception.*;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
-import com.payments.frontdoor.model.PaymentOrderRequest;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import com.payments.frontdoor.util.PaymentUtil;
 import io.temporal.activity.ActivityOptions;

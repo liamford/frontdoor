@@ -13,6 +13,7 @@ import io.temporal.spring.boot.ActivityImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 
 @Slf4j
@@ -20,19 +21,18 @@ import java.util.concurrent.ForkJoinPool;
 @ActivityImpl(workers = "send-payment-worker")
 public class PaymentActivityImpl implements PaymentActivity {
 
-
     public static final String CORRELATION_ID_HEADER = "x-correlation-id";
     private static final String SUCCESS_STATUS = "success";
     private static final String COMPLETED_STATUS = "completed";
+
     private final PaymentApiConnector paymentApiConnector;
     private final PaymentDispatcherService dispatcherService;
 
-
-    public PaymentActivityImpl(PaymentApiConnector paymentApiConnector, PaymentDispatcherService dispatcherService) {
+    public PaymentActivityImpl(PaymentApiConnector paymentApiConnector,
+                               PaymentDispatcherService dispatcherService) {
         this.paymentApiConnector = paymentApiConnector;
         this.dispatcherService = dispatcherService;
     }
-
 
     @Override
     public PaymentInstruction initiatePayment(PaymentDetails input) {
@@ -42,46 +42,100 @@ public class PaymentActivityImpl implements PaymentActivity {
 
     @Override
     public boolean managePaymentOrder(PaymentInstruction instruction) {
-        log.info("Managing payment order for: {}", instruction);
-        String correlationId = instruction.getHeaders().get(CORRELATION_ID_HEADER);
-        try {
-            log.info("Initiating payment Order for instruction: {}", instruction);
+        return Boolean.TRUE.equals(executePaymentOperation("payment order", instruction, () -> {
             PaymentOrderResponse response = paymentApiConnector.callOrderPayment(instruction);
             validateOrderResponse(response);
-            log.debug("Payment Order successful for instruction: {}", instruction);
             return true;
-        }
-        catch (PaymentOrderFailedException e) {
-            log.error("Payment Authorization failed: [correlationId={}] - {}",
-                    correlationId,
-                    e.getMessage());
-            throw e;
+        }));
+    }
 
-        }
-        catch (PaymentBadRequestException e) {
-            log.error("Invalid payment request: [correlationId={}] - {}",
-                    correlationId,
-                    e.getMessage());
-            throw e;
+    @Override
+    public boolean authorizePayment(PaymentInstruction instruction) {
+        return Boolean.TRUE.equals(executePaymentOperation("payment authorization", instruction, () -> {
+            PaymentAuthorizationResponse response = paymentApiConnector.callAuthorizePayment(instruction);
+            validateAuthorizationResponse(response);
+            return true;
+        }));
+    }
 
+    @Override
+    public PaymentStepStatus executePayment(PaymentInstruction instruction) {
+        return handlePaymentStep(instruction, PaymentStepStatus.EXECUTED, null);
+    }
+
+    @Override
+    public PaymentStepStatus clearAndSettlePayment(PaymentInstruction instruction) {
+        return handlePaymentStep(instruction, PaymentStepStatus.CLEARED, null);
+    }
+
+    @Override
+    public PaymentStepStatus sendNotification(PaymentInstruction instruction) {
+        return handlePaymentStep(instruction, PaymentStepStatus.NOTIFIED, null);
+    }
+
+    @Override
+    public PaymentStepStatus reconcilePayment(PaymentInstruction instruction) {
+        return handlePaymentStep(instruction, PaymentStepStatus.RECONCILED, null);
+    }
+
+    @Override
+    public PaymentStepStatus postPayment(PaymentInstruction instruction) {
+        validateDebtorCreditor(instruction);
+        ActivityExecutionContext context = Activity.getExecutionContext();
+        byte[] taskToken = context.getTaskToken();
+
+        CompletableFuture.runAsync(() ->
+                        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.POSTED, taskToken),
+                ForkJoinPool.commonPool());
+
+        context.doNotCompleteOnReturn();
+        return PaymentStepStatus.POSTED;
+    }
+
+    @Override
+    public PaymentStepStatus generateReports(PaymentInstruction instruction) {
+        return handlePaymentStep(instruction, PaymentStepStatus.REPORTED, null);
+    }
+
+    @Override
+    public PaymentStepStatus archivePayment(PaymentInstruction instruction) {
+        return handlePaymentStep(instruction, PaymentStepStatus.ARCHIVED, null);
+    }
+
+    @Override
+    public PaymentStepStatus refundPayment(PaymentInstruction instruction) {
+        return handlePaymentStep(instruction, PaymentStepStatus.REFUND, null);
+    }
+
+    private <T> T executePaymentOperation(String operationName, PaymentInstruction instruction,
+                                          PaymentOperation<T> operation) {
+        String correlationId = instruction.getHeaders().get(CORRELATION_ID_HEADER);
+        try {
+            log.info("Initiating {} for instruction: {}", operationName, instruction);
+            T result = operation.execute();
+            log.debug("{} successful for instruction: {}", operationName, instruction);
+            return result;
+        } catch (PaymentOrderFailedException | PaymentAuthorizationFailedException e) {
+            logAndRethrow("Payment operation failed", correlationId, e);
+        } catch (PaymentBadRequestException e) {
+            logAndRethrow("Invalid payment request", correlationId, e);
         } catch (PaymentUnauthorizedException | PaymentForbiddenException e) {
-            log.error("Authentication/Authorization failed: [correlationId={}] - {}",
-                    correlationId,
-                    e.getMessage());
-            throw e;
-
+            logAndRethrow("Authentication/Authorization failed", correlationId, e);
         } catch (PaymentServerException e) {
-            log.error("Payment service error: [correlationId={}] - {}",
-                    correlationId,
-                    e.getMessage());
+            log.error("Payment service error: [correlationId={}] - {}", correlationId, e.getMessage());
             throw new PaymentProcessingException("Payment service temporarily unavailable", e);
-
         } catch (Exception e) {
-            log.error("Unexpected error during payment authorization: [correlationId={}]",
-                    correlationId,
-                    e);
+            log.error("Unexpected error during {}: [correlationId={}]", operationName, correlationId, e);
             throw new PaymentProcessingException("Unexpected error during payment processing", e);
         }
+        return null; // This line will never be reached due to the exception handling
+    }
+
+    private PaymentStepStatus handlePaymentStep(PaymentInstruction instruction,
+                                                PaymentStepStatus status, byte[] taskToken) {
+        log.info("Processing payment step {} for: {}", status, instruction);
+        dispatcherService.dispatchPayment(instruction, status, taskToken);
+        return status;
     }
 
     private void validateOrderResponse(PaymentOrderResponse response) {
@@ -95,53 +149,6 @@ public class PaymentActivityImpl implements PaymentActivity {
         }
     }
 
-    @Override
-    public boolean authorizePayment(PaymentInstruction instruction) {
-        String correlationId = instruction.getHeaders().get(CORRELATION_ID_HEADER);
-        try {
-            log.info("Initiating payment authorization for instruction: {}", instruction);
-
-            PaymentAuthorizationResponse response = paymentApiConnector.callAuthorizePayment(instruction);
-            validateAuthorizationResponse(response);
-            log.debug("Payment authorization successful for instruction: {}", instruction);
-            return true;
-
-        }
-        catch (PaymentAuthorizationFailedException e) {
-            log.error("Payment Authorization failed: [correlationId={}] - {}",
-                    correlationId,
-                    e.getMessage());
-            throw e;
-
-        }
-        catch (PaymentBadRequestException e) {
-            log.error("Invalid payment request: [correlationId={}] - {}",
-                    correlationId,
-                    e.getMessage());
-            throw e;
-
-        } catch (PaymentUnauthorizedException | PaymentForbiddenException e) {
-            log.error("Authentication/Authorization failed: [correlationId={}] - {}",
-                    correlationId,
-                    e.getMessage());
-            throw e;
-
-        } catch (PaymentServerException e) {
-            log.error("Payment service error: [correlationId={}] - {}",
-                    correlationId,
-                    e.getMessage());
-            throw new PaymentProcessingException("Payment service temporarily unavailable", e);
-
-        } catch (Exception e) {
-            log.error("Unexpected error during payment authorization: [correlationId={}]",
-                    correlationId,
-                    e);
-            throw new PaymentProcessingException("Unexpected error during payment processing", e);
-        }
-    }
-
-
-
     private void validateAuthorizationResponse(PaymentAuthorizationResponse response) {
         if (response == null) {
             throw new PaymentAuthorizationFailedException("Payment authorization failed");
@@ -153,72 +160,16 @@ public class PaymentActivityImpl implements PaymentActivity {
         }
     }
 
-    @Override
-    public PaymentStepStatus executePayment(PaymentInstruction instruction) {
-        log.info("Executing payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.EXECUTED, null);
-        return PaymentStepStatus.EXECUTED;
-    }
-
-    @Override
-    public PaymentStepStatus clearAndSettlePayment(PaymentInstruction instruction) {
-        log.info("Clearing and settling payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.CLEARED, null);
-
-        return PaymentStepStatus.CLEARED;
-    }
-
-    @Override
-    public PaymentStepStatus sendNotification(PaymentInstruction instruction) {
-        log.info("Sending notification for payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.NOTIFIED, null);
-        return PaymentStepStatus.NOTIFIED;
-    }
-
-    @Override
-    public PaymentStepStatus reconcilePayment(PaymentInstruction instruction) {
-        log.info("Reconciling payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.RECONCILED, null);
-        return PaymentStepStatus.RECONCILED;
-    }
-
-    @Override
-    public PaymentStepStatus postPayment(PaymentInstruction instruction) {
-        log.info("Posting payment to ledger: {}", instruction);
+    private void validateDebtorCreditor(PaymentInstruction instruction) {
         if (instruction.getDebtor().equals(instruction.getCreditor())) {
-            throw new IllegalArgumentException("Debtor and creditor accounts are same");
+            throw new IllegalArgumentException("Debtor and creditor accounts cannot be the same");
         }
-        ActivityExecutionContext context = Activity.getExecutionContext();
-        byte[] taskToken = context.getTaskToken();
-
-        ForkJoinPool.commonPool().execute(() ->
-                dispatcherService.dispatchPayment(instruction, PaymentStepStatus.POSTED, taskToken));
-        context.doNotCompleteOnReturn();
-        return PaymentStepStatus.POSTED;
     }
 
-    @Override
-    public PaymentStepStatus generateReports(PaymentInstruction instruction) {
-        log.info("Generating reports for payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REPORTED, null);
-
-        return PaymentStepStatus.REPORTED;
-    }
-
-    @Override
-    public PaymentStepStatus archivePayment(PaymentInstruction instruction) {
-        log.info("Archiving payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.ARCHIVED, null);
-
-        return PaymentStepStatus.ARCHIVED;
-    }
-
-    @Override
-    public PaymentStepStatus refundPayment(PaymentInstruction instruction) {
-        log.info("Refunding payment: {}", instruction);
-        dispatcherService.dispatchPayment(instruction, PaymentStepStatus.REFUND, null);
-
-        return PaymentStepStatus.REFUND;
+    private void logAndRethrow(String message, String correlationId, Exception e) {
+        log.error("{}: [correlationId={}] - {}", message, correlationId, e.getMessage());
+        throw e instanceof RuntimeException ? (RuntimeException) e :
+                new PaymentProcessingException(message, e);
     }
 
     private PaymentInstruction convertToPaymentInstruction(PaymentDetails details) {
@@ -238,5 +189,11 @@ public class PaymentActivityImpl implements PaymentActivity {
                 .bankName("Liam Bank")
                 .headers(details.getHeaders())
                 .build();
+    }
+
+
+    @FunctionalInterface
+    private interface PaymentOperation<T> {
+        T execute() throws Exception;
     }
 }
