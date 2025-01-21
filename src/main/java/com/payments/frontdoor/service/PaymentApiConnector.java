@@ -1,6 +1,5 @@
 package com.payments.frontdoor.service;
 
-
 import com.payments.frontdoor.config.ApiConnectorCustomProperties;
 import com.payments.frontdoor.exception.*;
 import com.payments.frontdoor.model.*;
@@ -13,108 +12,165 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Service
 @Slf4j
 @AllArgsConstructor
 public class PaymentApiConnector {
     private final WebClient webClient;
-    private final ApiConnectorCustomProperties apiConnectorCustomProperties;
+    private final ApiConnectorCustomProperties properties;
 
+    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    private static final String CORRELATION_ID = "x-correlation-id";
+    private static final String NORMAL_PRIORITY = "Normal";
+    private static final String AUTHORIZE_PAYMENT_METHOD = "authorize-payment";
 
-    public PaymentAuthorizationResponse callAuthorizePayment(PaymentInstruction paymentInstruction) {
-        PaymentAuthorizationRequest requestBody = convertToAuthorizationRequestBody(paymentInstruction);
+    /**
+     * Calls the authorize payment endpoint
+     * @param instruction Payment instruction containing the payment details
+     * @return PaymentAuthorizationResponse The authorization response
+     */
+    public PaymentAuthorizationResponse callAuthorizePayment(PaymentInstruction instruction) {
+        return executeRequest(
+                properties.getAuthorize(),
+                convertToAuthorizationRequestBody(instruction),
+                PaymentAuthorizationResponse.class,
+                instruction.getHeaders(),
+                "Authorize Payment"
+        ).block(TIMEOUT);
+    }
+
+    /**
+     * Calls the order payment endpoint
+     * @param instruction Payment instruction containing the payment details
+     * @return PaymentOrderResponse The order response
+     */
+    public PaymentOrderResponse callOrderPayment(PaymentInstruction instruction) {
+        return executeRequest(
+                properties.getOrder(),
+                convertToOrderRequestBody(instruction),
+                PaymentOrderResponse.class,
+                instruction.getHeaders(),
+                "Order Payment"
+        ).block(TIMEOUT);
+    }
+
+    /**
+     * Generic method to execute HTTP requests
+     * @param uri The endpoint URI
+     * @param requestBody The request body
+     * @param responseType The expected response type
+     * @param headers HTTP headers
+     * @param operationType Operation type for logging
+     * @return Mono<R> The response
+     */
+    private <T, R> Mono<R> executeRequest(String uri, T requestBody, Class<R> responseType,
+                                          Map<String, String> headers, String operationType) {
         return webClient.post()
-                .uri(apiConnectorCustomProperties.getAuthorize())
-                .headers(httpHeaders -> paymentInstruction.getHeaders().forEach(httpHeaders::add))
+                .uri(uri)
+                .headers(httpHeaders -> headers.forEach(httpHeaders::add))
                 .bodyValue(requestBody)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response ->
-                        handleClientError(response, paymentInstruction.getHeaders().get("x-correlation-id")))
+                        handleClientError(response, headers.get(CORRELATION_ID)))
                 .onStatus(HttpStatusCode::is5xxServerError, response ->
-                        handleServerError(response, paymentInstruction.getHeaders().get("x-correlation-id")))
-                .bodyToMono(PaymentAuthorizationResponse.class)
-                .doOnNext(response -> log.info("Received Authorize Payment Response: {}", response))
-                .doOnError(error -> log.error("Error during Authorize Payment API call: {}", error.getMessage(), error))
-                .block(Duration.ofSeconds(30));
+                        handleServerError(response, headers.get(CORRELATION_ID)))
+                .bodyToMono(responseType)
+                .doOnSubscribe(subscription ->
+                        log.debug("Initiating {} request with correlationId: {}",
+                                operationType, headers.get(CORRELATION_ID)))
+                .doOnNext(response ->
+                        log.info("Received {} Response: {} with correlationId: {}",
+                                operationType, response, headers.get(CORRELATION_ID)))
+                .doOnError(error ->
+                        log.error("Error during {} API call with correlationId {}: {}",
+                                operationType, headers.get(CORRELATION_ID), error.getMessage(), error));
     }
 
-    public PaymentOrderResponse callOrderPayment(PaymentInstruction paymentInstruction) {
-        PaymentOrderRequest requestBody = convertToOrderRequestBody(paymentInstruction);
-        return webClient.post()
-                .uri(apiConnectorCustomProperties.getOrder())
-                .headers(httpHeaders -> paymentInstruction.getHeaders().forEach(httpHeaders::add))
-                .bodyValue(requestBody)
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, response ->
-                        handleClientError(response, paymentInstruction.getHeaders().get("x-correlation-id")))
-                .onStatus(HttpStatusCode::is5xxServerError, response ->
-                        handleServerError(response, paymentInstruction.getHeaders().get("x-correlation-id")))
-                .bodyToMono(PaymentOrderResponse.class)
-                .doOnNext(response -> log.info("Received Order Response: {}", response))
-                .doOnError(error -> log.error("Error during Order API call: {}", error.getMessage(), error))
-                .block(Duration.ofSeconds(30));
-    }
-
+    /**
+     * Handles server errors (5xx)
+     */
     private Mono<? extends Throwable> handleServerError(ClientResponse response, String correlationId) {
         return response.bodyToMono(String.class)
-                .flatMap(errorBody -> {
-                    String errorMessage = String.format("Server error occurred. Status: %s, CorrelationId: %s, Body: %s",
-                            response.statusCode(), correlationId, errorBody);
-                    log.error(errorMessage);
-
-                    return switch (response.statusCode().value()) {
-                        case 502 -> Mono.error(new PaymentGatewayException(errorMessage));
-                        case 503 -> Mono.error(new PaymentServiceUnavailableException(errorMessage));
-                        default -> Mono.error(new PaymentServerException(errorMessage));
-                    };
-                });
+                .map(errorBody -> buildErrorMessage(response, correlationId, errorBody))
+                .flatMap(errorMessage -> createServerException(response.statusCode().value(), errorMessage));
     }
 
+    /**
+     * Handles client errors (4xx)
+     */
     private Mono<? extends Throwable> handleClientError(ClientResponse response, String correlationId) {
         return response.bodyToMono(String.class)
-                .flatMap(errorBody -> {
-                    String errorMessage = String.format("Client error occurred. Status: %s, CorrelationId: %s, Body: %s",
-                            response.statusCode(), correlationId, errorBody);
-                    log.error(errorMessage);
-
-                    return switch (response.statusCode().value()) {
-                        case 400 -> Mono.error(new PaymentBadRequestException(errorMessage));
-                        case 401 -> Mono.error(new PaymentUnauthorizedException(errorMessage));
-                        case 403 -> Mono.error(new PaymentForbiddenException(errorMessage));
-                        case 404 -> Mono.error(new PaymentNotFoundException(errorMessage));
-                        case 409 -> Mono.error(new PaymentConflictException(errorMessage));
-                        default -> Mono.error(new PaymentClientException(errorMessage));
-                    };
-                });
+                .map(errorBody -> buildErrorMessage(response, correlationId, errorBody))
+                .flatMap(errorMessage -> createClientException(response.statusCode().value(), errorMessage));
     }
 
+    /**
+     * Builds error message with consistent format
+     */
+    private String buildErrorMessage(ClientResponse response, String correlationId, String errorBody) {
+        return String.format("%s error occurred. Status: %s, CorrelationId: %s, Body: %s",
+                response.statusCode().is4xxClientError() ? "Client" : "Server",
+                response.statusCode(), correlationId, errorBody);
+    }
 
+    /**
+     * Creates appropriate server exception based on status code
+     */
+    private Mono<? extends Throwable> createServerException(int statusCode, String errorMessage) {
+        log.error(errorMessage);
+        return Mono.error(switch (statusCode) {
+            case 502 -> new PaymentGatewayException(errorMessage);
+            case 503 -> new PaymentServiceUnavailableException(errorMessage);
+            default -> new PaymentServerException(errorMessage);
+        });
+    }
 
-    private PaymentAuthorizationRequest convertToAuthorizationRequestBody(PaymentInstruction paymentInstruction) {
+    /**
+     * Creates appropriate client exception based on status code
+     */
+    private Mono<? extends Throwable> createClientException(int statusCode, String errorMessage) {
+        log.error(errorMessage);
+        return Mono.error(switch (statusCode) {
+            case 400 -> new PaymentBadRequestException(errorMessage);
+            case 401 -> new PaymentUnauthorizedException(errorMessage);
+            case 403 -> new PaymentForbiddenException(errorMessage);
+            case 404 -> new PaymentNotFoundException(errorMessage);
+            case 409 -> new PaymentConflictException(errorMessage);
+            default -> new PaymentClientException(errorMessage);
+        });
+    }
+
+    /**
+     * Converts payment instruction to authorization request
+     */
+    private PaymentAuthorizationRequest convertToAuthorizationRequestBody(PaymentInstruction instruction) {
         return PaymentAuthorizationRequest.builder()
-                .method("authorize-payment")
-                .paymentId(paymentInstruction.getPaymentId())
-                .debtor(paymentInstruction.getDebtor())
-                .creditor(paymentInstruction.getCreditor())
-                .amount(paymentInstruction.getAmount().doubleValue())  // Converting BigDecimal to double
-                .currency(paymentInstruction.getCurrency())
-                .paymentReference(paymentInstruction.getPaymentReference())
-                .paymentDate(paymentInstruction.getPaymentDate())
+                .method(AUTHORIZE_PAYMENT_METHOD)
+                .paymentId(instruction.getPaymentId())
+                .debtor(instruction.getDebtor())
+                .creditor(instruction.getCreditor())
+                .amount(instruction.getAmount().doubleValue())
+                .currency(instruction.getCurrency())
+                .paymentReference(instruction.getPaymentReference())
+                .paymentDate(instruction.getPaymentDate())
                 .build();
     }
 
-    private PaymentOrderRequest convertToOrderRequestBody(PaymentInstruction paymentInstruction) {
+    /**
+     * Converts payment instruction to order request
+     */
+    private PaymentOrderRequest convertToOrderRequestBody(PaymentInstruction instruction) {
         return PaymentOrderRequest.builder()
-                .paymentId(paymentInstruction.getPaymentId())
-                .debtor(paymentInstruction.getDebtor())
-                .creditor(paymentInstruction.getCreditor())
-                .amount(paymentInstruction.getAmount().doubleValue())  // Converting BigDecimal to double
-                .currency(paymentInstruction.getCurrency())
-                .paymentReference(paymentInstruction.getPaymentReference())
-                .paymentDate(paymentInstruction.getPaymentDate())
-                .priority("Normal")
+                .paymentId(instruction.getPaymentId())
+                .debtor(instruction.getDebtor())
+                .creditor(instruction.getCreditor())
+                .amount(instruction.getAmount().doubleValue())
+                .currency(instruction.getCurrency())
+                .paymentReference(instruction.getPaymentReference())
+                .paymentDate(instruction.getPaymentDate())
+                .priority(NORMAL_PRIORITY)
                 .build();
     }
-
 }
