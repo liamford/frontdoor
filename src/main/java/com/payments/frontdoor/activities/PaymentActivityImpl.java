@@ -18,7 +18,7 @@ import java.util.concurrent.ForkJoinPool;
 
 @Slf4j
 @Component
-@ActivityImpl(workers = "send-payment-worker")
+@ActivityImpl(workers = {"normal-payment-worker", "high-payment-worker"})
 public class PaymentActivityImpl implements PaymentActivity {
 
     public static final String CORRELATION_ID_HEADER = "x-correlation-id";

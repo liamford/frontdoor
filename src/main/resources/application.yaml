@@ -44,8 +44,10 @@ spring:
     connection:
       target: 127.0.0.1:7233
     workers:
-      - name: send-payment-worker
-        task-queue: payment_subscription
+      - name: normal-payment-worker
+        task-queue: payment_normal_subscription
+      - name: high-payment-worker
+        task-queue: payment_high_subscription
     workersAutoDiscovery:
       packages:
         - com.payments.frontdoor.workflows

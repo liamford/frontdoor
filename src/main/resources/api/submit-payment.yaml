@@ -133,6 +133,15 @@ components:
           description: Date of the payment
           format: date
           example: 2023-10-01
+        priority:
+          type: string
+          description: Priority of the payment
+          enum:
+            - HIGH
+            - NORMAL
+            - LOW
+          default: NORMAL
+          example: NORMAL
     Account:
       required:
       - accountNumber
@@ -169,6 +178,10 @@ components:
           type: string
           description: Unique identifier for the payment
           example: "987654321"
+        workflow:
+          type: string
+          description: workflow for the payment
+          example: "HighPriorityWorkflow"
         startTime:
           type: string
           format: date-time

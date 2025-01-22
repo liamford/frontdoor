@@ -15,5 +15,6 @@ public class WorkflowResult {
     private WorkflowExecutionStatus workflowStatus;
     private Timestamp startTime;
     private Timestamp endTime;
+    private String workflowType;
     private List<ActivityResult> activities;
 }

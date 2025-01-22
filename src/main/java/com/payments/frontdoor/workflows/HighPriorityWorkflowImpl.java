@@ -27,10 +27,10 @@ import java.util.Set;
 import static com.payments.frontdoor.util.PaymentUtil.startRefundWorkflow;
 import static com.payments.frontdoor.util.PaymentUtil.startReportWorkflow;
 
-@WorkflowImpl(workers = "normal-payment-worker")
+@WorkflowImpl(workers = "high-payment-worker")
 @Slf4j
 @NoArgsConstructor
-public class PaymentWorkflowImpl implements PaymentWorkflow {
+public class HighPriorityWorkflowImpl implements HighPriorityWorkflow {
     private static final String INITIATE = "initiatePayment";
     private Set<PaymentStepStatus> steps;
 
@@ -38,7 +38,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
     // RetryOptions specify how to automatically handle retries when Activities fail
     private final RetryOptions retryoptions = RetryOptions.newBuilder()
             .setInitialInterval(Duration.ofSeconds(1)) // Wait 1 second before first retry
-            .setMaximumInterval(Duration.ofSeconds(20)) // Do not exceed 20 seconds between retries
+            .setMaximumInterval(Duration.ofSeconds(5)) // Do not exceed 20 seconds between retries
             .setBackoffCoefficient(2) // Wait 1 second, then 2, then 4, etc
             .setDoNotRetry(IllegalArgumentException.class.getName(),
                     NullPointerException.class.getName(),
@@ -50,15 +50,15 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
                     PaymentConflictException.class.getName(),
                     PaymentClientException.class.getName()
             ) // Do not retry for these exceptions
-            .setMaximumAttempts(5) // Fail after 5 attempts
+            .setMaximumAttempts(1) // Fail after 1 attempts
             .build();
 
     // ActivityOptions specify the limits on how long an Activity can execute before
     // being interrupted by the Orchestration service
     private final ActivityOptions defaultActivityOptions = ActivityOptions.newBuilder()
             .setRetryOptions(retryoptions) // Apply the RetryOptions defined above
-            .setStartToCloseTimeout(Duration.ofSeconds(2)) // Max execution time for single Activity
-            .setScheduleToCloseTimeout(Duration.ofSeconds(5000)) // Entire duration from scheduling to completion including queue time
+            .setStartToCloseTimeout(Duration.ofSeconds(1)) // Max execution time for single Activity
+            .setScheduleToCloseTimeout(Duration.ofSeconds(1000)) // Entire duration from scheduling to completion including queue time
             .build();
 
     private final Map<String, ActivityOptions> perActivityMethodOptions = new HashMap<String, ActivityOptions>() {{
@@ -86,28 +86,24 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             Promise<Boolean> isAuthorizedPromise = Async.function(activities::authorizePayment, instruction);
             Promise.allOf(isAuthorizedPromise, isOrderValidPromise).get();
 
-            Workflow.getLogger(PaymentWorkflowImpl.class).info("Payment successfully validated and authorized.");
+            Workflow.getLogger(HighPriorityWorkflowImpl.class).info("Payment successfully validated and authorized.");
 
         } catch (ActivityFailure e) {
             log.error("Payment validation or authorization failed: ", e);
-            Workflow.getLogger(PaymentWorkflowImpl.class).error("Payment validation or authorization failed: ", e);
+            Workflow.getLogger(HighPriorityWorkflowImpl.class).error("Payment validation or authorization failed: ", e);
             startReportWorkflow(instruction);
             throw Workflow.wrap(e);
         }
 
-        // Step 4: Execute Payment
-        activities.executePayment(instruction);
-        Workflow.await(() -> this.steps.contains(PaymentStepStatus.EXECUTED));
 
         // Steps 5, 6, & 7: Run Clearing, Notification, and Reconciliation in Parallel
         Promise<PaymentStepStatus> clearAndSettlePromise = Async.function(activities::clearAndSettlePayment, instruction);
         Promise<PaymentStepStatus> sendNotificationPromise = Async.function(activities::sendNotification, instruction);
-        Promise<PaymentStepStatus> reconcilePromise = Async.function(activities::reconcilePayment, instruction);
 
-        Promise.allOf(clearAndSettlePromise, sendNotificationPromise, reconcilePromise).get();
+
+        Promise.allOf(clearAndSettlePromise, sendNotificationPromise).get();
         steps.add(clearAndSettlePromise.get());
         steps.add(sendNotificationPromise.get());
-        steps.add(reconcilePromise.get());
 
         // Step 8: Post Payment
         try {
@@ -115,25 +111,20 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
 
         } catch (ActivityFailure e) {
             log.error("Post-payment failed: exception:", e);
-            Workflow.getLogger(PaymentWorkflowImpl.class).error("Post-payment failed: ", e);
+            Workflow.getLogger(HighPriorityWorkflowImpl.class).error("Post-payment failed: ", e);
             // Trigger refund sub-workflow
             startRefundWorkflow(instruction);
             throw Workflow.wrap(e);
         }
 
 
-        Workflow.getLogger(PaymentWorkflowImpl.class).info("Payment processing workflow completed.");
+        Workflow.getLogger(HighPriorityWorkflowImpl.class).info("Payment processing workflow completed.");
         startReportWorkflow(instruction);
         return PaymentUtil.createPaymentResponse(instruction.getPaymentId(), PaymentResponse.StatusEnum.ACSC);
 
     }
 
 
-
-    @Override
-    public void waitForStep(PaymentStepStatus paymentStepStatus) {
-        steps.add(paymentStepStatus);
-    }
 
     @Override
     public Set<PaymentStepStatus> getCompletedSteps() {

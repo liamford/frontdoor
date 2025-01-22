@@ -22,5 +22,6 @@ public class PaymentDetails {
     private String currency;
     private String paymentReference;
     private LocalDate paymentDate;
+    private PaymentPriority priority;
     private Map<String, String> headers;
 }

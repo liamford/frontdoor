@@ -106,6 +106,7 @@ public class PaymentControllerTest {
         paymentRequest.setAmount(BigDecimal.valueOf(100.5));
         paymentRequest.setCurrency("USD");
         paymentRequest.setPaymentReference("INV123456");
+        paymentRequest.setPriority(PaymentRequest.PriorityEnum.NORMAL);
         paymentRequest.setPaymentDate(LocalDate.parse("2022-01-12"));
         return paymentRequest;
     }

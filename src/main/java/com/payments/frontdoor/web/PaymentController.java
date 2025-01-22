@@ -3,6 +3,7 @@ package com.payments.frontdoor.web;
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.model.PaymentDetails;
+import com.payments.frontdoor.model.PaymentPriority;
 import com.payments.frontdoor.model.WorkflowResult;
 import com.payments.frontdoor.service.PaymentProcessService;
 import com.payments.frontdoor.swagger.model.Activities;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -78,6 +80,7 @@ public class PaymentController {
     private PaymentStatusResponse convertToPaymentStatusResponse(WorkflowResult workflowResult, String paymentId) {
         PaymentStatusResponse response = new PaymentStatusResponse();
         response.setPaymentId(paymentId);
+        response.setWorkflow(workflowResult.getWorkflowType());
         response.setStartTime(PaymentUtil.convertToOffsetDateTime(workflowResult.getStartTime()));
         response.setEndTime(PaymentUtil.convertToOffsetDateTime(workflowResult.getEndTime()));
         switch (workflowResult.getWorkflowStatus()) {
@@ -117,6 +120,9 @@ public class PaymentController {
                 .currency(request.getCurrency())
                 .paymentReference(request.getPaymentReference())
                 .paymentDate(request.getPaymentDate())
+                .priority(PaymentPriority.valueOf(Optional.ofNullable(request.getPriority())
+                        .map(Enum::toString)
+                        .orElse("NORMAL")))
                 .headers(headers)
                 .build();
     }

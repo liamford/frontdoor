@@ -6,6 +6,7 @@ import com.payments.frontdoor.config.TemporalWorkflowConfig;
 import com.payments.frontdoor.model.ActivityResult;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.WorkflowResult;
+import com.payments.frontdoor.workflows.HighPriorityWorkflow;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.EventType;
@@ -38,11 +39,29 @@ public class PaymentProcessService {
     private final TemporalWorkflowConfig temporalWorkflowConfig;
     private final WorkflowServiceStubs service;
 
+
     @Async
     public void processPaymentAsync(PaymentDetails paymentDetails) {
-        PaymentWorkflow workflow = temporalWorkflowConfig.sendPaymentWorkflowWithId(workflowClient, paymentDetails.getPaymentId());
-        WorkflowClient.start(workflow::processPayment, paymentDetails);
+        switch (paymentDetails.getPriority()) {
+            case HIGH:
+                HighPriorityWorkflow highWorkflow = temporalWorkflowConfig.highPaymentWorkflowWithId(
+                        workflowClient,
+                        paymentDetails.getPaymentId()
+                );
+                WorkflowClient.start(highWorkflow::processPayment, paymentDetails);
+                break;
+
+            case NORMAL:
+            default:
+                PaymentWorkflow normalWorkflow = temporalWorkflowConfig.sendPaymentWorkflowWithId(
+                        workflowClient,
+                        paymentDetails.getPaymentId()
+                );
+                WorkflowClient.start(normalWorkflow::processPayment, paymentDetails);
+                break;
+        }
     }
+
 
     public void sendSignal(PaymentStepStatus status, String workflowId){
         PaymentWorkflow workflow = workflowClient.newWorkflowStub(PaymentWorkflow.class, workflowId);
@@ -61,6 +80,7 @@ public class PaymentProcessService {
         WorkflowExecutionStatus workflowStatus = describeResponse.getWorkflowExecutionInfo().getStatus();
         Timestamp workflowStartTime = describeResponse.getWorkflowExecutionInfo().getStartTime();
         Timestamp workflowEndTime = describeResponse.getWorkflowExecutionInfo().getCloseTime();
+        String workflowType = describeResponse.getWorkflowExecutionInfo().getType().getName();
 
         if (includeActivities) {
             GetWorkflowExecutionHistoryRequest request = GetWorkflowExecutionHistoryRequest.newBuilder()
@@ -92,7 +112,7 @@ public class PaymentProcessService {
                     .collect(Collectors.toList());
         }
 
-        return new WorkflowResult(workflowStatus, workflowStartTime, workflowEndTime, activities);
+        return new WorkflowResult(workflowStatus, workflowStartTime, workflowEndTime, workflowType, activities);
     }
 
     private ActivityResult mapToActivityResult(ActivityTaskCompletedEventAttributes completedTaskAttributes,

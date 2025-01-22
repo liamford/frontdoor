@@ -2,8 +2,6 @@ package com.payments.frontdoor.workflows;
 
 import com.payments.frontdoor.activities.PaymentActivity;
 import com.payments.frontdoor.model.PaymentInstruction;
-import com.payments.frontdoor.swagger.model.PaymentResponse;
-import com.payments.frontdoor.util.PaymentUtil;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.spring.boot.WorkflowImpl;
@@ -11,7 +9,7 @@ import io.temporal.workflow.Workflow;
 
 import java.time.Duration;
 
-@WorkflowImpl(workers = "send-payment-worker")
+@WorkflowImpl(workers = {"normal-payment-worker", "high-payment-worker"})
 public class ReportWorkflowImpl implements ReportWorkflow {
 
     // RetryOptions specify how to automatically handle retries when Activities fail
