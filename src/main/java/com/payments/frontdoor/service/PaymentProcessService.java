@@ -68,6 +68,16 @@ public class PaymentProcessService {
         workflow.waitForStep(status);
     }
 
+    public WorkflowExecutionStatus getWorkflowStatus(String workflowId) {
+        DescribeWorkflowExecutionRequest describeRequest = DescribeWorkflowExecutionRequest.newBuilder()
+                .setNamespace(workflowClient.getOptions().getNamespace())
+                .setExecution(WorkflowExecution.newBuilder().setWorkflowId(workflowId).build())
+                .build();
+
+        DescribeWorkflowExecutionResponse describeResponse = service.blockingStub().describeWorkflowExecution(describeRequest);
+        return describeResponse.getWorkflowExecutionInfo().getStatus();
+    }
+
     public WorkflowResult retrieveWorkFlowHistory(String workflowId, boolean includeActivities) {
         List<ActivityResult> activities = null;
 
@@ -109,7 +119,7 @@ public class PaymentProcessService {
 
                         return mapToActivityResult(completedTaskAttributes, failedTaskAttributes, eventsById, status);
                     })
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         return new WorkflowResult(workflowStatus, workflowStartTime, workflowEndTime, workflowType, activities);

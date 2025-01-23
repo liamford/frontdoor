@@ -4,6 +4,7 @@ import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentPriority;
+import com.payments.frontdoor.model.PaymentStatus;
 import com.payments.frontdoor.model.WorkflowResult;
 import com.payments.frontdoor.service.PaymentProcessService;
 import com.payments.frontdoor.swagger.model.Activities;
@@ -12,14 +13,17 @@ import com.payments.frontdoor.swagger.model.PaymentResponse;
 import com.payments.frontdoor.swagger.model.PaymentStatusResponse;
 import com.payments.frontdoor.util.PaymentUtil;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.HashMap;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,39 +36,34 @@ public class PaymentController {
 
     private final PaymentProcessService paymentProcessService;
 
-    @PostMapping(value = "/submit-payment", consumes = "application/json", produces = "application/json")
-    public ResponseEntity<PaymentResponse> payment(
-            @RequestHeader(name = "x-correlation-id") String correlationId,
-            @RequestHeader(name = "x-idempotency-key") String idempotencyKey,
-            final @RequestBody @Valid PaymentRequest request,
+    private static final Duration POLLING_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration POLLING_INTERVAL = Duration.ofMillis(100);
+
+    @PostMapping(value = "/submit-payment",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PaymentResponse> submitPayment(
+            @RequestHeader(PaymentHeaders.CORRELATION_ID) String correlationId,
+            @RequestHeader(PaymentHeaders.IDEMPOTENCY_KEY) String idempotencyKey,
+            @RequestHeader(PaymentHeaders.REQUEST_STATUS) String requestStatus,
+            @Valid @RequestBody PaymentRequest request,
             BindingResult bindingResult) {
 
-        log.info("Received payment request: {} - correlationId: {}", request.getPaymentReference(), correlationId);
+        logPaymentRequest(request, correlationId);
+        validateRequest(bindingResult, idempotencyKey, request.getPaymentReference());
+        String uetr = generateUetr();
+        PaymentDetails paymentDetails = createPaymentDetails(request, uetr, correlationId,
+                idempotencyKey, requestStatus);
 
-        if (bindingResult.hasErrors()) {
-            throw new PaymentValidationException("Validation error");
-        }
+        return processPaymentRequest(paymentDetails, uetr, requestStatus);
 
-        validateIdempotencyKey(idempotencyKey, request.getPaymentReference());
-        String uetr = UUID.randomUUID().toString();
-        Map<String, String> headers = new HashMap<>();
-
-        headers.put("x-correlation-id", correlationId);
-        headers.put("x-idempotency-key", idempotencyKey);
-
-        PaymentDetails paymentDetails = getPaymentDetails(request, uetr , headers);
-
-        paymentProcessService.processPaymentAsync(paymentDetails);
-
-        PaymentResponse response = PaymentUtil.createPaymentResponse(uetr, PaymentResponse.StatusEnum.ACTC);
-
-        log.info("Payment Created with paymentId: {}", response.getPaymentId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping(value = "/payment-status/{paymentId}", produces = "application/json")
+
+    @GetMapping(value = "/payment-status/{paymentId}",
+            produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PaymentStatusResponse> getPaymentStatus(
-            @RequestHeader(name = "x-correlation-id") String correlationId,
+            @RequestHeader(PaymentHeaders.CORRELATION_ID) String correlationId,
             @PathVariable String paymentId,
             @RequestParam(name = "includeActivities", required = false, defaultValue = "false") boolean includeActivities) {
 
@@ -76,6 +75,82 @@ public class PaymentController {
 
         return ResponseEntity.ok(response);
     }
+
+
+    @UtilityClass
+    class PaymentHeaders {
+        public static final String CORRELATION_ID = "x-correlation-id";
+        public static final String IDEMPOTENCY_KEY = "x-idempotency-key";
+        public static final String REQUEST_STATUS = "x-request-status";
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public class PaymentProcessingException extends RuntimeException {
+        public PaymentProcessingException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+
+    private void logPaymentRequest(PaymentRequest request, String correlationId) {
+        log.info("Received payment request: {} - correlationId: {}",
+                request.getPaymentReference(), correlationId);
+    }
+
+    private void validateRequest(BindingResult bindingResult, String idempotencyKey,
+                                 String paymentReference) {
+        if (bindingResult.hasErrors()) {
+            log.error("Payment request validation failed");
+            throw new PaymentValidationException("Validation error");
+        }
+        validateIdempotencyKey(idempotencyKey, paymentReference);
+    }
+
+    private String generateUetr() {
+        return UUID.randomUUID().toString();
+    }
+
+    private PaymentDetails createPaymentDetails(PaymentRequest request, String uetr,
+                                                String correlationId, String idempotencyKey, String requestStatus) {
+
+        Map<String, String> headers = Map.of(
+                PaymentHeaders.CORRELATION_ID, correlationId,
+                PaymentHeaders.IDEMPOTENCY_KEY, idempotencyKey,
+                PaymentHeaders.REQUEST_STATUS, requestStatus
+        );
+
+        return getPaymentDetails(request, uetr, headers);
+    }
+
+    private ResponseEntity<PaymentResponse> processPaymentRequest(PaymentDetails paymentDetails,
+                                                                  String uetr, String requestStatus) {
+
+        paymentProcessService.processPaymentAsync(paymentDetails);
+
+        return PaymentStatus.SYNC.getCode().equals(requestStatus)
+                ? handleSyncPayment(uetr)
+                : handleAsyncPayment(uetr);
+    }
+
+    private ResponseEntity<PaymentResponse> handleSyncPayment(String uetr) {
+        try {
+            WorkflowExecutionStatus workflowStatus = pollUntilWorkflowComplete(uetr,
+                    POLLING_TIMEOUT, POLLING_INTERVAL);
+            PaymentResponse response = PaymentUtil.createPaymentResponse(uetr, workflowStatus);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error processing payment for UETR: {}", uetr, e);
+            throw new PaymentProcessingException("Payment processing failed", e);
+        }
+    }
+
+    private ResponseEntity<PaymentResponse> handleAsyncPayment(String uetr) {
+        PaymentResponse response = PaymentUtil.createPaymentResponse(uetr,
+                PaymentResponse.StatusEnum.ACTC);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+
 
     private PaymentStatusResponse convertToPaymentStatusResponse(WorkflowResult workflowResult, String paymentId) {
         PaymentStatusResponse response = new PaymentStatusResponse();
@@ -108,6 +183,31 @@ public class PaymentController {
         }
 
         return response;
+    }
+
+    private WorkflowExecutionStatus pollUntilWorkflowComplete(String uetr, Duration timeout, Duration pollInterval){
+        Instant startTime = Instant.now();
+
+        while (true) {
+            WorkflowExecutionStatus status = paymentProcessService.getWorkflowStatus(uetr);
+
+            // If status is not RUNNING, return the final status
+            if (status != WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING) {
+                return status;
+            }
+
+            // Check if we've exceeded the timeout
+            if (Duration.between(startTime, Instant.now()).compareTo(timeout) > 0) {
+                return status;
+            }
+
+            try {
+                Thread.sleep(pollInterval.toMillis());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Polling was interrupted", e);
+            }
+        }
     }
 
     private PaymentDetails getPaymentDetails(PaymentRequest request, String uetr, Map<String, String> headers) {

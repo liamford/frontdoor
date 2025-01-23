@@ -72,7 +72,8 @@ public class PaymentControllerTest {
     void testPaymentIdempotencyKeyMismatchError() throws Exception {
         mockMvc.perform(performPostRequest()
                 .header("x-correlation-id", "123456")
-                .header("x-idempotency-key", "123456"))
+                .header("x-idempotency-key", "123456")
+                .header("x-request-status", "201"))
                 .andExpect(status().isBadRequest())
                 .andExpect(result -> assertInstanceOf(IdempotencyKeyMismatchException.class, result.getResolvedException()));
     }
@@ -82,6 +83,7 @@ public class PaymentControllerTest {
     void testSuccessfulPaymentRequest() throws Exception {
         mockMvc.perform(performPostRequest()
                 .header("x-correlation-id", "123456")
+                .header("x-request-status", "201")
                 .header("x-idempotency-key", "INV123456"))
                 .andExpect(status().isCreated())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.status").value(PaymentResponse.StatusEnum.ACTC.toString()));
