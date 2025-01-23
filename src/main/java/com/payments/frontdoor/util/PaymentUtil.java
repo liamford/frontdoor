@@ -1,20 +1,32 @@
 package com.payments.frontdoor.util;
 
+import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.PaymentInstruction;
+import com.payments.frontdoor.model.PaymentPriority;
+import com.payments.frontdoor.model.WorkflowResult;
+import com.payments.frontdoor.swagger.model.Activities;
+import com.payments.frontdoor.swagger.model.PaymentRequest;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
+import com.payments.frontdoor.swagger.model.PaymentStatusResponse;
+import com.payments.frontdoor.web.PaymentController;
 import com.payments.frontdoor.workflows.RefundWorkflow;
 import com.payments.frontdoor.workflows.ReportWorkflow;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.time.ZoneId.systemDefault;
 
 
-
+@Slf4j
 public class PaymentUtil {
 
     public static PaymentResponse createPaymentResponse(String uetr, PaymentResponse.StatusEnum status) {
@@ -72,5 +84,57 @@ public class PaymentUtil {
         reportWorkflow.processReporting(instruction);
     }
 
+    public static String generateUetr() {
+        return UUID.randomUUID().toString();
+    }
 
+    public static PaymentStatusResponse convertToPaymentStatusResponse(WorkflowResult workflowResult, String paymentId) {
+        PaymentStatusResponse response = new PaymentStatusResponse();
+        response.setPaymentId(paymentId);
+        response.setWorkflow(workflowResult.getWorkflowType());
+        response.setStartTime(PaymentUtil.convertToOffsetDateTime(workflowResult.getStartTime()));
+        response.setEndTime(PaymentUtil.convertToOffsetDateTime(workflowResult.getEndTime()));
+        switch (workflowResult.getWorkflowStatus()) {
+            case WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED:
+                response.setStatus(PaymentStatusResponse.StatusEnum.ACSC);
+                break;
+            case WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED:
+                response.setStatus(PaymentStatusResponse.StatusEnum.RJCT);
+                break;
+            default:
+                response.setStatus(PaymentStatusResponse.StatusEnum.ACTC);
+                break;
+        }
+
+        if (workflowResult.getActivities() != null) {
+            response.setActivities(workflowResult.getActivities().stream()
+                    .map(activity -> {
+                        Activities activityResponse = new Activities();
+                        activityResponse.setActivityName(activity.getActivityName());
+                        activityResponse.setStatus(activity.getStatus());
+                        activityResponse.setStartTime(PaymentUtil.convertToOffsetDateTime(activity.getStartTime()));
+                        return activityResponse;
+                    })
+                    .collect(Collectors.toList()));
+        }
+
+        return response;
+    }
+
+    public static PaymentDetails getPaymentDetails(PaymentRequest request, String uetr, Map<String, String> headers) {
+        return PaymentDetails.builder()
+                .paymentStatus(PaymentResponse.StatusEnum.ACTC.toString())
+                .paymentId(uetr)
+                .debtor(request.getDebtor())
+                .creditor(request.getCreditor())
+                .amount(request.getAmount())
+                .currency(request.getCurrency())
+                .paymentReference(request.getPaymentReference())
+                .paymentDate(request.getPaymentDate())
+                .priority(PaymentPriority.valueOf(Optional.ofNullable(request.getPriority())
+                        .map(Enum::toString)
+                        .orElse("NORMAL")))
+                .headers(headers)
+                .build();
+    }
 }

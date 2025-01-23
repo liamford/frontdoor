@@ -3,11 +3,9 @@ package com.payments.frontdoor.web;
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.model.PaymentDetails;
-import com.payments.frontdoor.model.PaymentPriority;
 import com.payments.frontdoor.model.PaymentStatus;
 import com.payments.frontdoor.model.WorkflowResult;
 import com.payments.frontdoor.service.PaymentProcessService;
-import com.payments.frontdoor.swagger.model.Activities;
 import com.payments.frontdoor.swagger.model.PaymentRequest;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import com.payments.frontdoor.swagger.model.PaymentStatusResponse;
@@ -25,9 +23,8 @@ import javax.validation.Valid;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
+
+import static com.payments.frontdoor.util.PaymentUtil.*;
 
 @Slf4j
 @RestController
@@ -106,8 +103,10 @@ public class PaymentController {
         validateIdempotencyKey(idempotencyKey, paymentReference);
     }
 
-    private String generateUetr() {
-        return UUID.randomUUID().toString();
+    private void validateIdempotencyKey(String idempotencyKey, String paymentReference) {
+        if (!idempotencyKey.equals(paymentReference)) {
+            throw new IdempotencyKeyMismatchException("Idempotency key does not match payment reference");
+        }
     }
 
     private PaymentDetails createPaymentDetails(PaymentRequest request, String uetr,
@@ -150,41 +149,6 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-
-
-    private PaymentStatusResponse convertToPaymentStatusResponse(WorkflowResult workflowResult, String paymentId) {
-        PaymentStatusResponse response = new PaymentStatusResponse();
-        response.setPaymentId(paymentId);
-        response.setWorkflow(workflowResult.getWorkflowType());
-        response.setStartTime(PaymentUtil.convertToOffsetDateTime(workflowResult.getStartTime()));
-        response.setEndTime(PaymentUtil.convertToOffsetDateTime(workflowResult.getEndTime()));
-        switch (workflowResult.getWorkflowStatus()) {
-            case WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED:
-                response.setStatus(PaymentStatusResponse.StatusEnum.ACSC);
-                break;
-            case WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED:
-                response.setStatus(PaymentStatusResponse.StatusEnum.RJCT);
-                break;
-            default:
-                response.setStatus(PaymentStatusResponse.StatusEnum.ACTC);
-                break;
-        }
-
-        if (workflowResult.getActivities() != null) {
-            response.setActivities(workflowResult.getActivities().stream()
-                    .map(activity -> {
-                        Activities activityResponse = new Activities();
-                        activityResponse.setActivityName(activity.getActivityName());
-                        activityResponse.setStatus(activity.getStatus());
-                        activityResponse.setStartTime(PaymentUtil.convertToOffsetDateTime(activity.getStartTime()));
-                        return activityResponse;
-                    })
-                    .collect(Collectors.toList()));
-        }
-
-        return response;
-    }
-
     private WorkflowExecutionStatus pollUntilWorkflowComplete(String uetr, Duration timeout, Duration pollInterval){
         Instant startTime = Instant.now();
 
@@ -207,29 +171,6 @@ public class PaymentController {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("Polling was interrupted", e);
             }
-        }
-    }
-
-    private PaymentDetails getPaymentDetails(PaymentRequest request, String uetr, Map<String, String> headers) {
-        return PaymentDetails.builder()
-                .paymentStatus(PaymentResponse.StatusEnum.ACTC.toString())
-                .paymentId(uetr)
-                .debtor(request.getDebtor())
-                .creditor(request.getCreditor())
-                .amount(request.getAmount())
-                .currency(request.getCurrency())
-                .paymentReference(request.getPaymentReference())
-                .paymentDate(request.getPaymentDate())
-                .priority(PaymentPriority.valueOf(Optional.ofNullable(request.getPriority())
-                        .map(Enum::toString)
-                        .orElse("NORMAL")))
-                .headers(headers)
-                .build();
-    }
-
-    private void validateIdempotencyKey(String idempotencyKey, String paymentReference) {
-        if (!idempotencyKey.equals(paymentReference)) {
-            throw new IdempotencyKeyMismatchException("Idempotency key does not match payment reference");
         }
     }
 
