@@ -4,8 +4,10 @@ import com.google.protobuf.Timestamp;
 import com.payments.frontdoor.activities.PaymentStepStatus;
 import com.payments.frontdoor.config.TemporalWorkflowConfig;
 import com.payments.frontdoor.model.ActivityResult;
+import com.payments.frontdoor.model.CrossBoarderPaymentDetails;
 import com.payments.frontdoor.model.PaymentDetails;
 import com.payments.frontdoor.model.WorkflowResult;
+import com.payments.frontdoor.workflows.CrossBoarderPaymentWorkflow;
 import com.payments.frontdoor.workflows.HighPriorityWorkflow;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
 import io.temporal.api.common.v1.WorkflowExecution;
@@ -62,6 +64,15 @@ public class PaymentProcessService {
         }
     }
 
+    @Async
+    public void processCrossBoarderPaymentAsync(CrossBoarderPaymentDetails paymentDetails) {
+        log.info("Processing cross boarder payment with id: {}", paymentDetails.getPaymentId());
+        CrossBoarderPaymentWorkflow crossBoarderPaymentWorkflow = temporalWorkflowConfig.sendCrossBoarderPaymentWorkflowWithId(
+                workflowClient,
+                paymentDetails.getPaymentId()
+        );
+        WorkflowClient.start(crossBoarderPaymentWorkflow::processPayment, paymentDetails);
+    }
 
     public void sendSignal(PaymentStepStatus status, String workflowId){
         PaymentWorkflow workflow = workflowClient.newWorkflowStub(PaymentWorkflow.class, workflowId);

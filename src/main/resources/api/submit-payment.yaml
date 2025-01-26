@@ -108,6 +108,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/payments/v1/cross-border-payment:
+    post:
+      summary: Initiate a cross-border payment
+      description: Initiates an international payment between different currencies
+      operationId: initiateCrossBorderPayment
+      parameters:
+        - name: X-Correlation-ID
+          in: header
+          description: Correlation ID for the request
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotency key for the request
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossBorderPaymentRequest'
+        required: true
+      responses:
+        "200":
+          description: Cross-border payment initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
 components:
   schemas:
     PaymentRequest:
@@ -148,6 +183,107 @@ components:
             - LOW
           default: NORMAL
           example: NORMAL
+    CrossBorderPaymentRequest:
+      type: object
+      required:
+        - paymentReference
+        - customer
+        - beneficiary
+        - transactionDetails
+        - fees
+      properties:
+        paymentReference:
+          type: string
+          example: "PAY-12345"
+        customer:
+          type: object
+          required:
+            - customerId
+            - name
+            - accountNumber
+            - bankCode
+            - currency
+            - debitAmount
+          properties:
+            customerId:
+              type: string
+              example: "CUST-67890"
+            name:
+              type: string
+              example: "John Doe"
+            accountNumber:
+              type: string
+              example: "1234567890"
+            bankCode:
+              type: string
+              example: "NABAU3M"
+            currency:
+              type: string
+              example: "AUD"
+            debitAmount:
+              type: number
+              format: double
+              example: 1000.00
+        beneficiary:
+          type: object
+          required:
+            - name
+            - accountNumber
+            - bankCode
+            - currency
+          properties:
+            name:
+              type: string
+              example: "Jane Smith"
+            accountNumber:
+              type: string
+              example: "9876543210"
+            bankCode:
+              type: string
+              example: "HSBCUK3M"
+            currency:
+              type: string
+              example: "GBP"
+        transactionDetails:
+          type: object
+          required:
+            - exchangeRate
+            - foreignCurrencyAmount
+            - purpose
+            - initiatedDate
+          properties:
+            exchangeRate:
+              type: number
+              format: double
+              example: 0.55
+            foreignCurrencyAmount:
+              type: number
+              format: double
+              example: 550.00
+            purpose:
+              type: string
+              example: "Invoice Payment #INV-789"
+            initiatedDate:
+              type: string
+              format: date-time
+              example: "2025-01-25T12:00:00Z"
+            description:
+              type: string
+              example: "Cross-border payment for goods"
+        fees:
+          type: object
+          required:
+            - transferFee
+            - totalDebit
+          properties:
+            transferFee:
+              type: number
+              format: double
+              example: 10.00
+            totalDebit:
+              type: number
+              format: double
+              example: 1010.00
     Account:
       required:
       - accountNumber

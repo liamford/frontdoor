@@ -1,5 +1,6 @@
 package com.payments.frontdoor.config;
 
+import com.payments.frontdoor.workflows.CrossBoarderPaymentWorkflow;
 import com.payments.frontdoor.workflows.HighPriorityWorkflow;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
 import io.temporal.client.WorkflowClient;
@@ -13,6 +14,7 @@ public class TemporalWorkflowConfig {
     private static final class TaskQueue {
         private static final String NORMAL = "payment_normal_subscription";
         private static final String HIGH = "payment_high_subscription";
+        private static final String CROSS_BOARDER = "payment_cb_subscription";
 
         private TaskQueue() {} // Prevent instantiation
     }
@@ -32,6 +34,13 @@ public class TemporalWorkflowConfig {
     }
 
     @Bean
+    public WorkflowOptions cbworkflowOptions() {
+        return WorkflowOptions.newBuilder()
+                .setTaskQueue(TaskQueue.CROSS_BOARDER)
+                .build();
+    }
+
+    @Bean
     public PaymentWorkflow sendPaymentWorkflow(WorkflowClient workflowClient, WorkflowOptions workflowOptions) {
         return workflowClient.newWorkflowStub(PaymentWorkflow.class, workflowOptions);
     }
@@ -41,12 +50,25 @@ public class TemporalWorkflowConfig {
         return workflowClient.newWorkflowStub(HighPriorityWorkflow.class, highWorkflowOptions);
     }
 
+    @Bean
+    public CrossBoarderPaymentWorkflow crossBoarderPaymentWorkflow(WorkflowClient workflowClient, WorkflowOptions cbworkflowOptions) {
+        return workflowClient.newWorkflowStub(CrossBoarderPaymentWorkflow.class, cbworkflowOptions);
+    }
+
     public PaymentWorkflow sendPaymentWorkflowWithId(WorkflowClient workflowClient, String workflowId) {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setTaskQueue(TaskQueue.NORMAL)
                 .setWorkflowId(workflowId)
                 .build();
         return workflowClient.newWorkflowStub(PaymentWorkflow.class, options);
+    }
+
+    public CrossBoarderPaymentWorkflow sendCrossBoarderPaymentWorkflowWithId(WorkflowClient workflowClient, String workflowId) {
+        WorkflowOptions options = WorkflowOptions.newBuilder()
+                .setTaskQueue(TaskQueue.CROSS_BOARDER)
+                .setWorkflowId(workflowId)
+                .build();
+        return workflowClient.newWorkflowStub(CrossBoarderPaymentWorkflow.class, options);
     }
 
     public HighPriorityWorkflow highPaymentWorkflowWithId(WorkflowClient workflowClient, String workflowId) {

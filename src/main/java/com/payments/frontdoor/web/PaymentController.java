@@ -2,10 +2,9 @@ package com.payments.frontdoor.web;
 
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
 import com.payments.frontdoor.exception.PaymentValidationException;
-import com.payments.frontdoor.model.PaymentDetails;
-import com.payments.frontdoor.model.PaymentStatus;
-import com.payments.frontdoor.model.WorkflowResult;
+import com.payments.frontdoor.model.*;
 import com.payments.frontdoor.service.PaymentProcessService;
+import com.payments.frontdoor.swagger.model.CrossBorderPaymentRequest;
 import com.payments.frontdoor.swagger.model.PaymentRequest;
 import com.payments.frontdoor.swagger.model.PaymentResponse;
 import com.payments.frontdoor.swagger.model.PaymentStatusResponse;
@@ -46,13 +45,31 @@ public class PaymentController {
             @Valid @RequestBody PaymentRequest request,
             BindingResult bindingResult) {
 
-        logPaymentRequest(request, correlationId);
+        logPaymentRequest(request, correlationId, PaymentType.NORMAL);
         validateRequest(bindingResult, idempotencyKey, request.getPaymentReference());
         String uetr = generateUetr();
         PaymentDetails paymentDetails = createPaymentDetails(request, uetr, correlationId,
                 idempotencyKey, requestStatus);
 
         return processPaymentRequest(paymentDetails, uetr, requestStatus);
+
+    }
+
+    @PostMapping(value = "/cross-border-payment",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PaymentResponse> submitCrossBoarderPayment(
+            @RequestHeader(PaymentHeaders.CORRELATION_ID) String correlationId,
+            @RequestHeader(PaymentHeaders.IDEMPOTENCY_KEY) String idempotencyKey,
+            @Valid @RequestBody CrossBorderPaymentRequest request,
+            BindingResult bindingResult) {
+
+        logPaymentRequest(request, correlationId, PaymentType.CROSS_BOARDER);
+        validateRequest(bindingResult, idempotencyKey, request.getPaymentReference());
+        String uetr = generateUetr();
+        CrossBoarderPaymentDetails crossBorderPaymentRequest = createCrossBoarderPaymentDetails(request, uetr, correlationId,
+               idempotencyKey);
+        return processCrossPaymentRequest(crossBorderPaymentRequest, uetr);
 
     }
 
@@ -89,10 +106,16 @@ public class PaymentController {
     }
 
 
-    private void logPaymentRequest(PaymentRequest request, String correlationId) {
-        log.info("Received payment request: {} - correlationId: {}",
-                request.getPaymentReference(), correlationId);
+    private  <T> void logPaymentRequest(T request, String correlationId, PaymentType paymentType) {
+        String reference = getPaymentReference(request);
+        log.info("Received payment {} with request: {} - correlationId: {}",
+                paymentType.name(),
+                reference,
+                correlationId);
     }
+
+
+
 
     private void validateRequest(BindingResult bindingResult, String idempotencyKey,
                                  String paymentReference) {
@@ -118,7 +141,18 @@ public class PaymentController {
                 PaymentHeaders.REQUEST_STATUS, requestStatus
         );
 
-        return getPaymentDetails(request, uetr, headers);
+        return (PaymentDetails) getDetails(request, uetr, headers);
+    }
+
+    private CrossBoarderPaymentDetails createCrossBoarderPaymentDetails(CrossBorderPaymentRequest request, String uetr,
+                                                                        String correlationId, String idempotencyKey) {
+
+        Map<String, String> headers = Map.of(
+                PaymentHeaders.CORRELATION_ID, correlationId,
+                PaymentHeaders.IDEMPOTENCY_KEY, idempotencyKey
+        );
+
+        return (CrossBoarderPaymentDetails) getDetails(request, uetr, headers);
     }
 
     private ResponseEntity<PaymentResponse> processPaymentRequest(PaymentDetails paymentDetails,
@@ -129,6 +163,13 @@ public class PaymentController {
         return PaymentStatus.SYNC.getCode().equals(requestStatus)
                 ? handleSyncPayment(uetr)
                 : handleAsyncPayment(uetr);
+    }
+
+    private ResponseEntity<PaymentResponse> processCrossPaymentRequest(CrossBoarderPaymentDetails paymentDetails,
+                                                                  String uetr) {
+
+        paymentProcessService.processCrossBoarderPaymentAsync(paymentDetails);
+        return handleAsyncPayment(uetr);
     }
 
     private ResponseEntity<PaymentResponse> handleSyncPayment(String uetr) {

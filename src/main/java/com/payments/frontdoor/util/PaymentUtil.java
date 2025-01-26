@@ -1,19 +1,14 @@
 package com.payments.frontdoor.util;
 
-import com.payments.frontdoor.model.PaymentDetails;
-import com.payments.frontdoor.model.PaymentInstruction;
-import com.payments.frontdoor.model.PaymentPriority;
-import com.payments.frontdoor.model.WorkflowResult;
-import com.payments.frontdoor.swagger.model.Activities;
-import com.payments.frontdoor.swagger.model.PaymentRequest;
-import com.payments.frontdoor.swagger.model.PaymentResponse;
-import com.payments.frontdoor.swagger.model.PaymentStatusResponse;
-import com.payments.frontdoor.web.PaymentController;
+import com.payments.frontdoor.model.*;
+import com.payments.frontdoor.swagger.model.*;
 import com.payments.frontdoor.workflows.RefundWorkflow;
 import com.payments.frontdoor.workflows.ReportWorkflow;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -27,6 +22,7 @@ import static java.time.ZoneId.systemDefault;
 
 
 @Slf4j
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PaymentUtil {
 
     public static PaymentResponse createPaymentResponse(String uetr, PaymentResponse.StatusEnum status) {
@@ -136,5 +132,37 @@ public class PaymentUtil {
                         .orElse("NORMAL")))
                 .headers(headers)
                 .build();
+    }
+
+    public static CrossBoarderPaymentDetails getCrossBorderPaymentDetails(CrossBorderPaymentRequest request, String uetr, Map<String, String> headers) {
+        return CrossBoarderPaymentDetails.builder()
+                .paymentStatus(PaymentResponse.StatusEnum.ACTC.toString())
+                .paymentId(uetr)
+                .headers(headers)
+                .customer(request.getCustomer())
+                .beneficiary(request.getBeneficiary())
+                .transactionDetails(request.getTransactionDetails())
+                .fees(request.getFees())
+                .build();
+    }
+
+
+    public static Object getDetails(Object request, String uetr, Map<String, String> headers) {
+        return switch (request) {
+            case PaymentRequest pr -> getPaymentDetails(pr, uetr, headers);
+            case CrossBorderPaymentRequest cbr -> getCrossBorderPaymentDetails(cbr, uetr, headers);
+            case null -> throw new IllegalArgumentException("Payment request cannot be null");
+            default -> throw new IllegalArgumentException("Unsupported payment request type: " +
+                    request.getClass().getSimpleName());
+        };
+    }
+
+    public static String getPaymentReference(Object request) {
+        return switch (request) {
+            case PaymentRequest pr -> pr.getPaymentReference();
+            case CrossBorderPaymentRequest cbr -> cbr.getPaymentReference();
+            case null -> throw new IllegalArgumentException("Payment request cannot be null");
+            default -> throw new IllegalArgumentException("Unsupported payment request type: " + request.getClass().getSimpleName());
+        };
     }
 }

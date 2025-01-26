@@ -48,6 +48,8 @@ spring:
         task-queue: payment_normal_subscription
       - name: high-payment-worker
         task-queue: payment_high_subscription
+      - name: cb-payment-worker
+        task-queue: payment_cb_subscription
     workersAutoDiscovery:
       packages:
         - com.payments.frontdoor.workflows
