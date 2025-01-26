@@ -9,6 +9,7 @@ import io.temporal.spring.boot.ActivityImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 
@@ -18,6 +19,7 @@ import java.util.Optional;
 public class CrossBoarderPaymentActivityImpl implements CrossBoarderPaymentActivity {
 
     private static final String CORRELATION_ID_HEADER = "x-correlation-id";
+    private static final Duration POLLING_INTERVAL = Duration.ofMillis(500);
 
     private static final Map<CrossBoarderActivityType, ActivityConfig> ACTIVITY_CONFIGS = Map.of(
             CrossBoarderActivityType.DEBIT, new ActivityConfig("debit-error", PaymentIsoStatus.ACTC),
@@ -83,6 +85,12 @@ public class CrossBoarderPaymentActivityImpl implements CrossBoarderPaymentActiv
             String correlationId = getCorrelationId(input);
             ActivityConfig config = ACTIVITY_CONFIGS.get(activityType);
             boolean success = !correlationId.endsWith(config.errorSuffix());
+            try {
+                Thread.sleep(POLLING_INTERVAL);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Polling was interrupted", e);
+            }
 
             if (!success) {
                 throw new PaymentProcessingException("Payment processing failed");
