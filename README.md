@@ -12,6 +12,15 @@ Payment Workflow Steps
 Validation: Validate the payment details, including debtor and creditor information.
 Execution: Execute the payment by transferring funds from the debtor's account to the creditor's account.
 
+## Submit Payment Scenario
+![BIAN Payment Flow](images/Workflows-bian.png "BIAN Payment Processing Flow")
+
+
+## Cross Boarder Payment Scenario
+
+![Cross Boarder Payment Flow](images/Saga-side.png "Cross Boarder Payment Processing Flow")
+
+
 ## Project Structure
 
 - **Languages and Frameworks**: Java, Gradle

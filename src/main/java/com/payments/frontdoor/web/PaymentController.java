@@ -1,6 +1,7 @@
 package com.payments.frontdoor.web;
 
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
+import com.payments.frontdoor.exception.PaymentProcessingException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.model.*;
 import com.payments.frontdoor.service.PaymentProcessService;
@@ -210,7 +211,7 @@ public class PaymentController {
                 Thread.sleep(pollInterval.toMillis());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RuntimeException("Polling was interrupted", e);
+                throw new PaymentProcessingException("Polling was interrupted", e);
             }
         }
     }

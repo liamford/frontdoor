@@ -85,13 +85,7 @@ public class CrossBoarderPaymentActivityImpl implements CrossBoarderPaymentActiv
             String correlationId = getCorrelationId(input);
             ActivityConfig config = ACTIVITY_CONFIGS.get(activityType);
             boolean success = !correlationId.endsWith(config.errorSuffix());
-            try {
-                Thread.sleep(POLLING_INTERVAL);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("Polling was interrupted", e);
-            }
-
+            sleep();
             if (!success) {
                 throw new PaymentProcessingException("Payment processing failed");
             }
@@ -107,6 +101,16 @@ public class CrossBoarderPaymentActivityImpl implements CrossBoarderPaymentActiv
             throw new PaymentProcessingException("Payment processing failed", e);
         }
     }
+
+    private void sleep() {
+        try {
+            Thread.sleep(POLLING_INTERVAL);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new PaymentProcessingException("Polling was interrupted", e);
+        }
+    }
+
 
     private String getCorrelationId(CrossBoarderPaymentDetails input) {
         return Optional.ofNullable(input.getHeaders())

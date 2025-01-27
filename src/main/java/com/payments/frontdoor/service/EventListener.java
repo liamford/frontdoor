@@ -30,8 +30,8 @@ public class EventListener {
             containerFactory = CONTAINER_FACTORY,
             groupId = KAFKA_GROUP_ID
     )
-    public void listenSignal(ConsumerRecord<String, PaymentRecord> record, Acknowledgment ack) {
-        String key = record.key();
+    public void listenSignal(ConsumerRecord<String, PaymentRecord> paymentRecord, Acknowledgment ack) {
+        String key = paymentRecord.key();
         log.info("Processing executed payment event - key: {}", key);
 
         try {
@@ -50,12 +50,12 @@ public class EventListener {
             containerFactory = CONTAINER_FACTORY,
             groupId = KAFKA_GROUP_ID
     )
-    public void listenToken(ConsumerRecord<String, PaymentRecord> record, Acknowledgment ack) {
-        String key = record.key();
+    public void listenToken(ConsumerRecord<String, PaymentRecord> paymentRecord, Acknowledgment ack) {
+        String key = paymentRecord.key();
         log.info("Processing posted payment event - key: {}", key);
 
         try {
-            byte[] token = extractToken(record.value());
+            byte[] token = extractToken(paymentRecord.value());
             paymentProcessService.sendToken(token);
             log.info("Successfully processed posted payment - key: {}", key);
         } catch (Exception e) {
@@ -66,8 +66,8 @@ public class EventListener {
         }
     }
 
-    private byte[] extractToken(PaymentRecord record) {
-        return Optional.ofNullable(record)
+    private byte[] extractToken(PaymentRecord paymentRecord) {
+        return Optional.ofNullable(paymentRecord)
                 .map(PaymentRecord::getToken)
                 .filter(buffer -> buffer != null && buffer.hasRemaining())
                 .map(this::bufferToBytes)

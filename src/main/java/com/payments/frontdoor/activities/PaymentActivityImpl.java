@@ -194,6 +194,6 @@ public class PaymentActivityImpl implements PaymentActivity {
 
     @FunctionalInterface
     private interface PaymentOperation<T> {
-        T execute() throws Exception;
+        T execute() throws PaymentProcessingException;
     }
 }
