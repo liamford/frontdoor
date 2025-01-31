@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "PaymentTransaction",
+  "namespace": "com.payments.frontdoor.avro",
+  "fields": [
+    {
+      "name": "paymentReference",
+      "type": "string"
+    },
+    {
+      "name": "customer",
+      "type": "com.payments.frontdoor.avro.Customer"
+    },
+    {
+      "name": "beneficiary",
+      "type": "com.payments.frontdoor.avro.Beneficiary"
+    },
+    {
+      "name": "transactionDetails",
+      "type": "com.payments.frontdoor.avro.TransactionDetails"
+    },
+    {
+      "name": "fees",
+      "type": "com.payments.frontdoor.avro.Fees"
+    }
+  ]
+}

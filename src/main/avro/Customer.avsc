@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "Customer",
+  "namespace": "com.payments.frontdoor.avro",
+  "fields": [
+    {"name": "customerId", "type": "string"},
+    {"name": "name", "type": "string"},
+    {"name": "accountNumber", "type": "string"},
+    {"name": "bankCode", "type": "string"},
+    {"name": "currency", "type": "string"},
+    {"name": "debitAmount", "type": "double"}
+  ]
+}

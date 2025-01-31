@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "TransactionDetails",
+  "namespace": "com.payments.frontdoor.avro",
+  "fields": [
+    {"name": "exchangeRate", "type": "double"},
+    {"name": "foreignCurrencyAmount", "type": "double"},
+    {"name": "purpose", "type": "string"},
+    {"name": "initiatedDate", "type": "string"},
+    {"name": "description", "type": "string"}
+  ]
+}

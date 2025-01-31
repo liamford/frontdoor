@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "Beneficiary",
+  "namespace": "com.payments.frontdoor.avro",
+  "fields": [
+    {"name": "name", "type": "string"},
+    {"name": "accountNumber", "type": "string"},
+    {"name": "bankCode", "type": "string"},
+    {"name": "currency", "type": "string"}
+  ]
+}

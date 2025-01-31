@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "Fees",
+  "namespace": "com.payments.frontdoor.avro",
+  "fields": [
+    {"name": "transferFee", "type": "double"},
+    {"name": "totalDebit", "type": "double"}
+  ]
+}
