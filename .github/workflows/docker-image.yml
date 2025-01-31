@@ -32,7 +32,7 @@ jobs:
         run: ./gradlew jacocoTestReport
 
       - name: Upload JaCoCo Test Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: jacoco-test-results
           path: build/jacocoHtml
@@ -48,13 +48,13 @@ jobs:
         run: docker save ${{ secrets.DOCKER_USERNAME }}/frontdoor:${{ github.sha }} -o frontdoor_sha.tar
 
       - name: Upload Docker image (latest)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: frontdoor_latest
           path: frontdoor_latest.tar
 
       - name: Upload Docker image (sha)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: frontdoor_sha
           path: frontdoor_sha.tar
