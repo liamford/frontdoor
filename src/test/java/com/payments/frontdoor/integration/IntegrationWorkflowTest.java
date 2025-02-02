@@ -2,7 +2,10 @@ package com.payments.frontdoor.integration;
 
 import com.payments.frontdoor.FrontdoorApplication;
 import com.payments.frontdoor.model.ActivityResult;
+import com.payments.frontdoor.model.PaymentStatus;
 import com.payments.frontdoor.swagger.model.*;
+import com.payments.frontdoor.util.PaymentUtil;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -51,15 +54,22 @@ public class IntegrationWorkflowTest {
 
     @Test
     void aSyncPaymentSubmitCheck() {
-        PaymentResponse paymentResponse = submitPaymentRequest();
+        PaymentResponse paymentResponse = submitPaymentRequest(PaymentStatus.ASYNC);
         assertNotNull(paymentResponse.getPaymentId(), "Payment ID should not be null.");
         assertEquals(PaymentResponse.StatusEnum.ACTC, paymentResponse.getStatus(), "Expected status ACTC.");
-
         waitForPaymentCompletion(paymentResponse.getPaymentId());
     }
 
-    private PaymentResponse submitPaymentRequest() {
-        HttpHeaders headers = createHeaders("123456", "INV123456");
+    @Test
+    void syncPaymentSubmitCheck() {
+        PaymentResponse paymentResponse = submitPaymentRequest(PaymentStatus.SYNC);
+        assertNotNull(paymentResponse.getPaymentId(), "Payment ID should not be null.");
+        assertEquals(PaymentResponse.StatusEnum.ACSC, paymentResponse.getStatus(), "Expected status ACSC.");
+        waitForPaymentCompletion(paymentResponse.getPaymentId());
+    }
+
+    private PaymentResponse submitPaymentRequest(PaymentStatus status) {
+        HttpHeaders headers = createHeaders(PaymentUtil.generateUetr(), "INV123456", status);
         HttpEntity<PaymentRequest> requestEntity = new HttpEntity<>(buildPaymentRequest(), headers);
 
         ResponseEntity<PaymentResponse> response = restTemplate.postForEntity(
@@ -71,19 +81,19 @@ public class IntegrationWorkflowTest {
 
     private void waitForPaymentCompletion(String paymentId) {
         AtomicReference<PaymentStatusResponse> statusResponse = new AtomicReference<>(getPaymentStatus(paymentId));
-
-        assertTimeout(Duration.ofSeconds(5), () -> {
-            while (!PaymentStatusResponse.StatusEnum.ACSC.equals(statusResponse.get().getStatus())) {
-                statusResponse.set(getPaymentStatus(paymentId));
-                Thread.sleep(500);
-            }
-        });
+       Awaitility.await()
+              .atMost(Duration.ofSeconds(5))
+              .pollInterval(Duration.ofMillis(500))
+              .until(() -> {
+                  statusResponse.set(getPaymentStatus(paymentId));
+                  return PaymentStatusResponse.StatusEnum.ACSC.equals(statusResponse.get().getStatus());
+              });
 
         validateActivities(statusResponse.get().getActivities());
     }
 
     private PaymentStatusResponse getPaymentStatus(String paymentId) {
-        HttpHeaders headers = createHeaders("123456", null);
+        HttpHeaders headers = createHeaders("123456", null, PaymentStatus.ASYNC);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         ResponseEntity<PaymentStatusResponse> response = restTemplate.exchange(
@@ -133,13 +143,13 @@ public class IntegrationWorkflowTest {
         return request;
     }
 
-    private HttpHeaders createHeaders(String correlationId, String idempotencyKey) {
+    private HttpHeaders createHeaders(String correlationId, String idempotencyKey, PaymentStatus status) {
         HttpHeaders headers = new HttpHeaders();
         headers.set("x-correlation-id", correlationId);
         if (idempotencyKey != null) {
             headers.set("x-idempotency-key", idempotencyKey);
         }
-        headers.set("x-request-status", "201");
+        headers.set("x-request-status", status.getCode());
         return headers;
     }
 }
