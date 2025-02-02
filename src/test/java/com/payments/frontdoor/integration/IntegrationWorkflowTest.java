@@ -3,13 +3,16 @@ package com.payments.frontdoor.integration;
 import com.payments.frontdoor.FrontdoorApplication;
 import com.payments.frontdoor.model.ActivityResult;
 import com.payments.frontdoor.model.PaymentStatus;
+import com.payments.frontdoor.service.PaymentProcessService;
 import com.payments.frontdoor.swagger.model.*;
 import com.payments.frontdoor.util.PaymentUtil;
+import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.*;
 import org.springframework.test.annotation.DirtiesContext;
@@ -34,6 +37,10 @@ public class IntegrationWorkflowTest {
     private static final String BASE_URL = "http://localhost:8080/api/payments/v1";
     private static final RestTemplate restTemplate = new RestTemplate();
 
+
+    @Autowired
+    private PaymentProcessService paymentProcessService;
+
     @BeforeAll
     public static void setup() {
         logger.info("Starting integration tests...");
@@ -46,6 +53,7 @@ public class IntegrationWorkflowTest {
     }
 
     @Test
+    @DisplayName("Health Check Test")
     void healthCheck() {
         ResponseEntity<String> response = restTemplate.getForEntity(BASE_URL + "/actuator", String.class);
         assertEquals(HttpStatus.OK, response.getStatusCode(), "Health check failed.");
@@ -53,24 +61,72 @@ public class IntegrationWorkflowTest {
     }
 
     @Test
+    @DisplayName("Asynchronous Payment Submission Test")
     void aSyncPaymentSubmitCheck() {
-        PaymentResponse paymentResponse = submitPaymentRequest(PaymentStatus.ASYNC);
+        Account debtor = new Account();
+        debtor.setAccountName("Liam Ford");
+        debtor.setAccountNumber("123456");
+        Account creditor = new Account();
+        creditor.setAccountName("John Doe");
+        creditor.setAccountNumber("123457");
+        PaymentResponse paymentResponse = submitPaymentRequest(PaymentStatus.ASYNC,  debtor, creditor);
         assertNotNull(paymentResponse.getPaymentId(), "Payment ID should not be null.");
         assertEquals(PaymentResponse.StatusEnum.ACTC, paymentResponse.getStatus(), "Expected status ACTC.");
         waitForPaymentCompletion(paymentResponse.getPaymentId());
+        verifyReportStatus(paymentResponse.getPaymentId());
     }
 
     @Test
+    @DisplayName("Synchronous Payment Submission Test")
     void syncPaymentSubmitCheck() {
-        PaymentResponse paymentResponse = submitPaymentRequest(PaymentStatus.SYNC);
+        Account debtor = new Account();
+        debtor.setAccountName("Liam Ford");
+        debtor.setAccountNumber("123456");
+        Account creditor = new Account();
+        creditor.setAccountName("John Doe");
+        creditor.setAccountNumber("123457");
+        PaymentResponse paymentResponse = submitPaymentRequest(PaymentStatus.SYNC, debtor, creditor);
         assertNotNull(paymentResponse.getPaymentId(), "Payment ID should not be null.");
         assertEquals(PaymentResponse.StatusEnum.ACSC, paymentResponse.getStatus(), "Expected status ACSC.");
         waitForPaymentCompletion(paymentResponse.getPaymentId());
+        verifyReportStatus(paymentResponse.getPaymentId());
     }
 
-    private PaymentResponse submitPaymentRequest(PaymentStatus status) {
+    @Test
+    @DisplayName("Synchronous Payment Submission Rejection Test")
+    void syncPaymentSubmitCheckReject() {
+        Account debtor = new Account();
+        debtor.setAccountName("Liam Ford");
+        debtor.setAccountNumber("123456");
+        PaymentResponse paymentResponse = submitPaymentRequest(PaymentStatus.SYNC, debtor, debtor);
+        assertNotNull(paymentResponse.getPaymentId(), "Payment ID should not be null.");
+        assertEquals(PaymentResponse.StatusEnum.RJCT, paymentResponse.getStatus(), "Expected status ACSC.");
+        verifyRefundStatus(paymentResponse.getPaymentId());
+        verifyReportStatus(paymentResponse.getPaymentId());
+    }
+
+
+    private void verifyRefundStatus(String paymentId) {
+        String refundId = paymentId + "-refund";
+        assertTrue(
+            WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING.equals(paymentProcessService.getWorkflowStatus(refundId)) ||
+                WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED.equals(paymentProcessService.getWorkflowStatus(refundId)),
+            "Expected status RUNNING or COMPLETED."
+        );
+    }
+
+    private void verifyReportStatus(String paymentId) {
+        String reportId = paymentId + "-report";
+        assertTrue(
+            WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING.equals(paymentProcessService.getWorkflowStatus(reportId)) ||
+                WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED.equals(paymentProcessService.getWorkflowStatus(reportId)),
+            "Expected status RUNNING or COMPLETED."
+        );
+    }
+
+    private PaymentResponse submitPaymentRequest(PaymentStatus status , Account debtor, Account creditor) {
         HttpHeaders headers = createHeaders(PaymentUtil.generateUetr(), "INV123456", status);
-        HttpEntity<PaymentRequest> requestEntity = new HttpEntity<>(buildPaymentRequest(), headers);
+        HttpEntity<PaymentRequest> requestEntity = new HttpEntity<>(buildPaymentRequest(debtor, creditor), headers);
 
         ResponseEntity<PaymentResponse> response = restTemplate.postForEntity(
             BASE_URL + "/submit-payment", requestEntity, PaymentResponse.class);
@@ -123,14 +179,7 @@ public class IntegrationWorkflowTest {
             "Activities validation failed.");
     }
 
-    private PaymentRequest buildPaymentRequest() {
-        Account debtor = new Account();
-        debtor.setAccountNumber("123456789");
-        debtor.setAccountName("John Doe");
-        Account creditor = new Account();
-        creditor.setAccountNumber("987654321");
-        creditor.setAccountName("Jane Smith");
-
+    private PaymentRequest buildPaymentRequest(Account debtor, Account creditor) {
         PaymentRequest request = new PaymentRequest();
         request.setDebtor(debtor);
         request.setCreditor(creditor);
