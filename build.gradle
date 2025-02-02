@@ -7,6 +7,7 @@ plugins {
 	id 'io.gatling.gradle' version '3.13.1.2'
 	id 'jacoco'
 	id 'com.github.davidmc24.gradle.plugin.avro' version '1.9.1'
+    id 'com.avast.gradle.docker-compose' version '0.17.12'
 }
 
 group = 'com.payments'
@@ -26,6 +27,18 @@ avro {
 	enableDecimalLogicalType = true
 }
 
+dockerCompose {
+    useComposeFiles = ['src/test/resources/compose/docker-compose.yml']
+    startedServices = [] // Specify services to start if needed
+    environment.put 'COMPOSE_PROJECT_NAME', 'integration-tests' // Optional: Name the project
+    stopContainers = true // Ensure containers stop after the tests
+    removeContainers = true // Cleanup after tests
+    removeVolumes = true // Remove volumes after tests
+    removeImages =  com.avast.gradle.dockercompose.RemoveImages.None
+    waitForTcpPorts = true // Wait for services to be ready
+    captureContainersOutput = true // Capture logs for debugging
+}
+
 configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
@@ -40,7 +53,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.kafka:spring-kafka'
-	implementation 'org.apache.kafka:kafka-clients:3.9.0'
+	implementation 'org.apache.kafka:kafka-clients:3.8.1'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'io.confluent:kafka-avro-serializer:7.8.0'
 	implementation 'org.apache.avro:avro:1.12.0'
@@ -64,6 +77,8 @@ dependencies {
 	testImplementation 'org.mockito:mockito-junit-jupiter:5.15.2'
 	testImplementation 'org.mockito:mockito-core:5.15.2'
 	testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.slf4j:slf4j-api:2.1.0-alpha1'
+    testImplementation 'ch.qos.logback:logback-classic:1.5.16'
 }
 
 swaggerSources {
@@ -110,10 +125,14 @@ idea {
 compileJava.dependsOn swaggerSources.payment.code
 compileJava.dependsOn generateAvroJava
 
+
+
 sourceSets.main.java.srcDir "${swaggerSources.payment.code.outputDir}/src/main/java"
 
-tasks.named('test') {
-	useJUnitPlatform()
+tasks.named('test', Test) {
+    useJUnitPlatform {
+        excludeTags 'integration' // Exclude integration tests
+    }
 }
 
 tasks.named('generateAvroJava').configure {
@@ -130,6 +149,24 @@ tasks.named('jar') {
 tasks.register('cleanHprof', Delete) {
 	delete fileTree(dir: '.', include: '**/*.hprof')
 }
+
+tasks.register('integrationTest', Test) {
+    group = 'verification'
+    description = 'Run integration tests'
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
+    shouldRunAfter 'test'
+}
+
+tasks.named('integrationTest') {
+    dependsOn 'composeUp'
+    finalizedBy 'composeDown'
+}
+
+check.dependsOn integrationTest
+
+
 
 tasks.named('clean') {
 	dependsOn cleanHprof
