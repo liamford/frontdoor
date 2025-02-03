@@ -3,8 +3,10 @@ package com.payments.frontdoor.config;
 import com.payments.frontdoor.workflows.CrossBoarderPaymentWorkflow;
 import com.payments.frontdoor.workflows.HighPriorityWorkflow;
 import com.payments.frontdoor.workflows.PaymentWorkflow;
+import com.payments.frontdoor.workflows.ProcessScheduler;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,6 +20,9 @@ public class TemporalWorkflowConfig {
 
         private TaskQueue() {} // Prevent instantiation
     }
+
+    @Value("${payments.scheduler.batch-payment}")
+    private String batchPaymentCron;
 
     @Bean
     public WorkflowOptions workflowOptions() {
@@ -41,8 +46,21 @@ public class TemporalWorkflowConfig {
     }
 
     @Bean
+    public WorkflowOptions cronWorkflowOptions() {
+        return WorkflowOptions.newBuilder()
+            .setTaskQueue(TaskQueue.NORMAL)
+            .setCronSchedule(batchPaymentCron)
+            .build();
+    }
+
+    @Bean
     public PaymentWorkflow sendPaymentWorkflow(WorkflowClient workflowClient, WorkflowOptions workflowOptions) {
         return workflowClient.newWorkflowStub(PaymentWorkflow.class, workflowOptions);
+    }
+
+    @Bean
+    public ProcessScheduler processScheduler(WorkflowClient workflowClient, WorkflowOptions cronWorkflowOptions) {
+        return workflowClient.newWorkflowStub(ProcessScheduler.class, cronWorkflowOptions);
     }
 
     @Bean
@@ -78,4 +96,14 @@ public class TemporalWorkflowConfig {
                 .build();
         return workflowClient.newWorkflowStub(HighPriorityWorkflow.class, options);
     }
+
+    public ProcessScheduler processSchedulerWithId(WorkflowClient workflowClient, String workflowId) {
+        WorkflowOptions options = WorkflowOptions.newBuilder()
+            .setTaskQueue(TaskQueue.NORMAL)
+            .setWorkflowId(workflowId)
+            .setCronSchedule(batchPaymentCron)
+            .build();
+        return workflowClient.newWorkflowStub(ProcessScheduler.class, options);
+    }
+
 }

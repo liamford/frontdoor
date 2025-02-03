@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -164,5 +165,9 @@ public class PaymentUtil {
             case null -> throw new IllegalArgumentException("Payment request cannot be null");
             default -> throw new IllegalArgumentException("Unsupported payment request type: " + request.getClass().getSimpleName());
         };
+    }
+
+    public static String getCurrentDateTime() {
+        return OffsetDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd:HH:mm:ss"));
     }
 }
