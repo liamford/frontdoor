@@ -40,3 +40,4 @@ out/
 .snyk
 snyk-report.json
 snyk-test-results/
+src/main/resources/certificates/keystore.jks
