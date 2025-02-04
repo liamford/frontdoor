@@ -11,4 +11,10 @@ public interface ProcessSchedulerActivity {
     @ActivityMethod
     String submitPayments(PaymentDetails input);
 
+    @ActivityMethod
+    String healthCheck();
+
+    @ActivityMethod
+    String notifyBatchJobStatus(String paymentType);
+
 }

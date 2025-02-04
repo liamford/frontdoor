@@ -85,7 +85,7 @@ payments:
       authorize: http://localhost:3001/api/authorize
       order: http://localhost:3001/api/payment-orders/process
   scheduler:
-    batch-payment:  '12 13 * * *'
+    batch-payment:  '27 0 * * *'
 management:
   endpoints:
     web:

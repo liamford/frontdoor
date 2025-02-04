@@ -51,7 +51,9 @@ public class ProcessSchedulerImpl implements ProcessScheduler {
 
         int numberOfPayments = ThreadLocalRandom.current().nextInt(5, 11);
         log.info("Number of payments to process for Payment Type : {} = {}", paymentType, numberOfPayments);
+        activities.healthCheck();
         IntStream.range(0, numberOfPayments).mapToObj(payment -> createPaymentDetails()).forEach(activities::submitPayments);
+        activities.notifyBatchJobStatus(paymentType);
 
         return "Batch Payment Processing Completed";
     }

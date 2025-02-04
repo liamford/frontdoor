@@ -20,7 +20,21 @@ public class ProcessSchedulerActivityImpl implements ProcessSchedulerActivity {
 
     @Override
     public String submitPayments(PaymentDetails input) {
+        log.info("Submitting payment for: {}", input);
          paymentProcessService.processPaymentAsync(input);
         return "Payment submitted successfully";
+    }
+
+    @Override
+    public String healthCheck() {
+
+        log.info("Health check for ProcessSchedulerActivity");
+        return "ProcessSchedulerActivity is healthy";
+    }
+
+    @Override
+    public String notifyBatchJobStatus(String paymentType) {
+        log.info("Notifying batch job status for {}", paymentType);
+        return "Batch job status for " + paymentType + " is updated";
     }
 }
