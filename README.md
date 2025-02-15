@@ -76,8 +76,24 @@ MockServer for simulating API responses during testing
 Temporal for Integration testing
 
 
-## Getting Started
+## Temporal Payment Processing Demos
 
+I have prepared five demos using **Temporal** that showcase various payment processing scenarios. These demos cover both positive and negative cases, retry strategies, workflow recovery, cross-border payments, and scheduling with CronJobs. Check them out below:
+
+1. **Positive Payment Processing (Customer Attended & Customer Unattended Scenarios)**  
+   [![Positive Payment Processing](images/positive_payment_processing.png)](https://youtu.be/HSuteHF-af4)
+
+2. **Negative Scenarios and Retries**  
+   [![Negative Scenarios and Retries](images/negative_scenario.jpg)](https://youtu.be/XxaHHrLEZQA)
+
+3. **Payment Recovery with Workflow and Retry Capabilities**  
+   [![Payment Recovery](images/payment_recovery.jpeg)](https://youtu.be/YfEXa0u-Pek)
+
+4. **Saga Pattern with Cross-Border Payments**  
+   [![Saga Pattern](images/saga_pattern.jpg)](https://youtu.be/9lZHJyMEz78)
+
+5. **CronJobs with Temporal**  
+   [![CronJobs](images/cron_jobs.jpeg)](https://youtu.be/VOf48J_0LZk)
 
 
 ### Building the Project
