@@ -1,7 +1,6 @@
 package com.payments.frontdoor.web;
 
 import com.payments.frontdoor.exception.IdempotencyKeyMismatchException;
-import com.payments.frontdoor.exception.PaymentProcessingException;
 import com.payments.frontdoor.exception.PaymentValidationException;
 import com.payments.frontdoor.model.*;
 import com.payments.frontdoor.service.PaymentProcessService;
@@ -100,7 +99,7 @@ public class PaymentController {
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public class PaymentProcessingException extends RuntimeException {
+    public static class PaymentProcessingException extends RuntimeException {
         public PaymentProcessingException(String message, Throwable cause) {
             super(message, cause);
         }
@@ -175,8 +174,8 @@ public class PaymentController {
 
     private ResponseEntity<PaymentResponse> handleSyncPayment(String uetr) {
         try {
-            WorkflowExecutionStatus workflowStatus = pollUntilWorkflowComplete(uetr,
-                    POLLING_TIMEOUT, POLLING_INTERVAL);
+            WorkflowExecutionStatus workflowStatus = pollUntilWorkflowComplete(uetr
+            );
             PaymentResponse response = PaymentUtil.createPaymentResponse(uetr, workflowStatus);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -191,7 +190,7 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    private WorkflowExecutionStatus pollUntilWorkflowComplete(String uetr, Duration timeout, Duration pollInterval){
+    private WorkflowExecutionStatus pollUntilWorkflowComplete(String uetr){
         Instant startTime = Instant.now();
 
         while (true) {
@@ -203,12 +202,12 @@ public class PaymentController {
             }
 
             // Check if we've exceeded the timeout
-            if (Duration.between(startTime, Instant.now()).compareTo(timeout) > 0) {
+            if (Duration.between(startTime, Instant.now()).compareTo(PaymentController.POLLING_TIMEOUT) > 0) {
                 return status;
             }
 
             try {
-                Thread.sleep(pollInterval.toMillis());
+                Thread.sleep(PaymentController.POLLING_INTERVAL.toMillis());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new PaymentProcessingException("Polling was interrupted", e);
