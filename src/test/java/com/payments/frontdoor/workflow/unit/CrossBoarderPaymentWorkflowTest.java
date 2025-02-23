@@ -44,7 +44,7 @@ class CrossBoarderPaymentWorkflowTest {
     @RegisterExtension
     public final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
-                    .setWorkflowTypes(CrossBoarderPaymentWorkflowImpl.class)
+                    .registerWorkflowImplementationTypes(CrossBoarderPaymentWorkflowImpl.class)
                     .setActivityImplementations(new CrossBoarderPaymentActivityImpl())
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();

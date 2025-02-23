@@ -38,7 +38,7 @@ class ReportWorkflowTest {
     @RegisterExtension
     public  final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
-                    .setWorkflowTypes(ReportWorkflowImpl.class)
+                    .registerWorkflowImplementationTypes(ReportWorkflowImpl.class)
                    .setActivityImplementations(new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService))
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();

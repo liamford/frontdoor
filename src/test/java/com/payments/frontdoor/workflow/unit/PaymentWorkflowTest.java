@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -42,7 +43,7 @@ class PaymentWorkflowTest {
     @RegisterExtension
     public final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
-                    .setWorkflowTypes(PaymentWorkflowImpl.class, RefundWorkflowImpl.class, ReportWorkflowImpl.class)
+                    .registerWorkflowImplementationTypes(PaymentWorkflowImpl.class, RefundWorkflowImpl.class, ReportWorkflowImpl.class)
                     .setActivityImplementations(new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService))
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();

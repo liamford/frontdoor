@@ -40,7 +40,7 @@ class RefundWorkflowTest {
     @RegisterExtension
     public  final TestWorkflowExtension testWorkflow =
             TestWorkflowExtension.newBuilder()
-                    .setWorkflowTypes(RefundWorkflowImpl.class, ReportWorkflowImpl.class)
+                    .registerWorkflowImplementationTypes(RefundWorkflowImpl.class, ReportWorkflowImpl.class)
                    .setActivityImplementations(new PaymentActivityImpl(paymentApiConnector, paymentDispatcherService))
                     .setInitialTime(Instant.parse("2021-10-10T10:01:00Z"))
                     .build();
